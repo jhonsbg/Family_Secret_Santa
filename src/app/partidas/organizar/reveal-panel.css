@@ -1,0 +1,55 @@
+.reveal-control { gap: 18px; }
+.reveal-control-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+}
+.reveal-control-heading .card-heading { margin: 0; }
+.reveal-control-progress { display: grid; gap: 6px; color: var(--forest); }
+.reveal-control-progress progress {
+  width: 100%;
+  height: 9px;
+  appearance: none;
+  border: 0;
+  border-radius: 8px;
+  background: #ebe2ce;
+  accent-color: var(--forest);
+}
+.reveal-control-progress progress::-webkit-progress-bar { background: #ebe2ce; border-radius: 8px; }
+.reveal-control-progress progress::-webkit-progress-value { background: var(--forest); border-radius: 8px; }
+.reveal-control-progress progress::-moz-progress-bar { background: var(--forest); border-radius: 8px; }
+.reveal-control-turn {
+  min-width: 0;
+  border: 1px solid #dbc7a5;
+  border-radius: 15px;
+  padding: clamp(14px, 2.5vw, 32px);
+  background: radial-gradient(ellipse at 100% 0%, #f5e7cd 0%, transparent 72%), #fffbf1;
+}
+.reveal-control-turn > h3 {
+  font-family: var(--font-serif);
+  font-size: clamp(1.55rem, 4vw, 3.1rem);
+  font-weight: 560;
+  color: var(--forest);
+}
+.reveal-control-kicker, .reveal-control-sync, .reveal-control-complete {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.reveal-control-kicker svg, .reveal-control-sync svg, .reveal-control-complete svg { flex: none; }
+.reveal-control-kicker { font-weight: 690; color: #705020; }
+.reveal-control-sync { color: var(--muted); font-size: .95rem; }
+.reveal-control-complete { color: var(--forest); font-weight: 640; }
+.reveal-control-secondary, .reveal-control-actions, .reveal-control-postponed { display: flex; gap: 8px; flex-wrap: wrap; }
+.reveal-control-secondary { border-top: 1px solid #d9c6a7; padding-block-start: 10px; }
+.reveal-control-secondary .button { background: transparent; }
+.reveal-control-postponed h3 { flex-basis: 100%; }
+.reveal-control :is(.button, select) { min-height: 44px; }
+.reveal-control .button { white-space: normal; }
+.reveal-control-display { border-top: 1px solid var(--line); padding-block-start: 16px; }
+@media (max-width: 560px) {
+  .reveal-control-turn > .button, .reveal-control-actions .button { width: 100%; }
+  .reveal-control-secondary .button { flex: 1 1 9rem; }
+}

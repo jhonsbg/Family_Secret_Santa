@@ -1,0 +1,75 @@
+{
+  "name": "amigo-secreto",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "node --import tsx --env-file=.env.local scripts/db.ts migrate",
+    "db:seed": "node --import tsx --env-file=.env.local scripts/db.ts seed",
+    "db:verify": "node --import tsx --env-file=.env.local scripts/verify-development-db.ts",
+    "db:reset": "node --import tsx --env-file=.env.local scripts/db.ts reset",
+    "test": "node --import tsx test/connection.test.ts",
+    "auth:invite:dev": "node --import tsx --env-file=.env.local scripts/auth-invitation.ts",
+    "auth:cleanup": "node --import tsx --env-file=.env.local scripts/auth-cleanup.ts",
+    "test:recovery": "node --import tsx test/recovery.test.ts",
+    "test:recovery:browser": "node test/recovery.browser.mjs",
+    "test:draw": "node --import tsx test/draw-engine.test.ts",
+    "test:draw:browser": "node test/draw.browser.mjs",
+    "test:draw:db": "node --conditions=react-server --import tsx test/draw.test.ts",
+    "test:auth": "node --import tsx test/auth.test.ts",
+    "test:registration": "node --import tsx test/registration.test.ts",
+    "test:registration:browser": "node test/registration.browser.mjs",
+    "test:db": "node --import tsx test/postgres.test.ts",
+    "test:participant:db": "node --conditions=react-server --import tsx test/participant.test.ts",
+    "test:participant:browser": "node test/participant.browser.mjs",
+    "test:reveal:db": "node --conditions=react-server --import tsx test/reveal.test.ts",
+    "test:reveal:browser": "node test/reveal.browser.mjs",
+    "test:presentation": "node --import tsx test/presentation-state.test.ts",
+    "start": "next start",
+    "build:vercel": "npm run check:release && npm run build",
+    "check:release": "node --import tsx scripts/check-release.ts",
+    "db:migrate:release": "node --import tsx scripts/release-migrate.ts"
+  },
+  "engines": {
+    "node": ">=20.9.0"
+  },
+  "dependencies": {
+    "@fontsource-variable/dm-sans": "^5.2.0",
+    "@fontsource-variable/fraunces": "^5.2.0",
+    "@node-rs/argon2": "^2.2.2",
+    "@radix-ui/react-alert-dialog": "^1.1.0",
+    "@tailwindcss/postcss": "^4",
+    "@vercel/functions": "3.11.3",
+    "class-variance-authority": "^0.7.1",
+    "drizzle-orm": "^0.45.4",
+    "lucide-react": "^0.577.0",
+    "motion": "^12",
+    "next": "^16",
+    "pg": "^8.23.1",
+    "react": "^19.2",
+    "react-dom": "^19.2",
+    "server-only": "^0.0.1",
+    "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/pg": "^8.23.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "drizzle-kit": "^0.31.11",
+    "eslint": "^9",
+    "eslint-config-next": "^16",
+    "playwright": "^1.65.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": {
+      "esbuild": "0.25.12"
+    }
+  }
+}
