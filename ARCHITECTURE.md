@@ -145,11 +145,11 @@ Mantener la lógica de dominio y controles de permisos fuera de componentes clie
 
 No app nativa, no WhatsApp API, no notificaciones push, no login obligatorio por Google/correo, no microservicios, no servicio en tiempo real permanente, no CMS ni pagos. Los enlaces de invitación se comparten manualmente.
 
-## 12. Implementación de la demo E1
+## 12. Implementación histórica de la demo E1
 
 El layout conserva el estado de interfaz en memoria durante la navegación de una pestaña. Dos acciones de demostración entregan únicamente el contenido del sobre de ejemplo o la respuesta del turno confirmado en la interfaz. El guion de correspondencias está en el servidor. Las acciones de E1 permiten recorrer datos ficticios y carecen de autenticación o autorización; la pantalla pública utiliza exclusivamente el estado de turno y los resultados ya revelados.
 
-## 13. Presentación E1.1
+## 13. Presentación histórica E1.1
 
 La preferencia de movimiento usa un valor estático compartido por el servidor y el primer render del navegador. Después de la hidratación sigue los cambios de la preferencia del sistema. Los componentes de Motion reciben esa preferencia y las animaciones del sobre comienzan una vez recibido el resultado ficticio. La navegación por etapas usa anclas y el estado de partida existente.
 
@@ -228,3 +228,9 @@ El intervalo de consulta sigue siendo de tres segundos. Tras 15 segundos sin una
 ## 22. Operación E5.1
 
 El runtime web de Vercel selecciona la conexión agrupada por entorno y verifica el nombre esperado de base. Los scripts de mantenimiento usan un endpoint directo y comprueban que empareje con el de tráfico. El ejecutor compara hashes y fechas del registro de Drizzle antes de aplicar cambios. El pool web se registra en el ciclo de vida de Fluid Compute y el servidor conserva la autoridad sobre las revisiones, los intentos y las sesiones. [Guía de operación](docs/E5.1-operacion.md)
+
+## 23. Entrada de producción y configuración de partidas
+
+La portada lleva a la creación de partidas y a la cuenta autenticada. Las rutas históricas de participante, organizador y presentación redirigen a sus equivalentes reales. El prototipo E1.1 queda en el historial de Git. La aplicación conserva los componentes festivos compartidos y el código de sembrado sigue reservado a herramientas de desarrollo.
+
+El organizador puede guardar nombre, fecha en Bogotá, presupuesto y opciones mientras la partida esté en inscripciones abiertas o cerradas. La escritura valida el origen, exige la sesión del organizador de la partida y usa el mismo bloqueo de fila que el sorteo. La invitación general existente muestra la configuración actual. La participación del organizador se elige al crear la partida. Esta integración reutiliza las seis migraciones existentes.

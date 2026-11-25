@@ -86,7 +86,13 @@ export function RevealPanel({ gameId, origin, timezone, state, drawVersion }: {
           Desde este momento quedarán bloqueados el sorteo, los participantes, las exclusiones y la edición de deseos.
         </Confirm>)}
       {state.state === "paused" && <Button disabled={disabled} onClick={() => change("resume")}>Reanudar intercambio</Button>}
-      {state.state === "finished" && <p className="reveal-control-complete"><Check size={19} aria-hidden="true" /> El resumen ya está disponible en la presentación.</p>}
+      {state.state === "finished" && <>
+        <h3 className="reveal-control-complete"><Check size={19} aria-hidden="true" /> Resumen del intercambio</h3>
+        <ul className="name-list">{state.history.map(({ order, giver, recipient, correct }) => <li key={order}>
+          <strong>{giver}</strong> le regaló a <strong>{recipient}</strong>
+          {correct !== null && (correct ? " · Adivinanza correcta" : " · Hubo sorpresa")}
+        </li>)}</ul>
+      </>}
       {state.state === "running" && <>
         {!current && state.canNext && <Button disabled={disabled} onClick={() => change("next")}>Iniciar siguiente turno</Button>}
         {!current && state.postponed.length > 0 && <div className="reveal-control-postponed">

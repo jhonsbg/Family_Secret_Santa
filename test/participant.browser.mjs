@@ -70,9 +70,11 @@ async function run() {
     const status = await metadata.json();
     assert.equal(status.version, 1);
     assert.equal(status.opened, false);
-    for (const name of candidates.slice(1)) {
-      assert.ok(!html.includes(name) && !JSON.stringify(status).includes(name));
-    }
+    assert.doesNotMatch(html, /¡Te tocó regalarle a/);
+    assert.equal(await member.locator(".envelope-result").count(), 0);
+    assert.deepEqual(Object.keys(status).sort(), ["editable", "opened", "revision", "sessionView", "version", "wishesEnabled"]);
+    const roster = member.locator("section").filter({ has: member.getByRole("heading", { name: "Participantes confirmados" }) });
+    assert.deepEqual((await roster.getByRole("listitem").allTextContents()).sort(), [...candidates].sort());
 
     stage = "apertura, omisión, repetición y deseos";
     await member.getByLabel("Omitir animación").check();

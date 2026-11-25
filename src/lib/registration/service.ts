@@ -7,7 +7,7 @@ import { replacePersonalInvitation } from "../auth/invitations";
 import { lockActiveSession } from "../auth/recovery-store";
 import { createSession } from "../auth/sessions";
 import type { Database, Transaction } from "../db/connection";
-import { createGameRecord, displayName, editableGameStates, type CreateGame } from "../db/games";
+import { createGameRecord, displayName, editableGameStates, validateGameSettings, type CreateGame, type GameSettings } from "../db/games";
 import { games, invites, participants, sessions } from "../db/schema";
 
 export async function createManagedGame(db: Database, pepper: Buffer, input: CreateGame & {
@@ -90,6 +90,7 @@ export async function organizerPanel(db: Database, token: string, gameId: string
 }
 
 export type OrganizerOperation =
+  | { kind: "settings"; settings: GameSettings }
   | { kind: "general" | "close" | "reopen" }
   | { kind: "add"; name: string }
   | { kind: "rename"; personId: string; name: string }
@@ -105,6 +106,10 @@ export async function manageRegistration(db: Database, token: string, gameId: st
     )).for("no key update");
     if (!game || !await lockActiveSession(tx, access.session)) return null;
     const now = new Date();
+    if (operation.kind === "settings") {
+      await tx.update(games).set({ ...validateGameSettings(operation.settings), updatedAt: now }).where(eq(games.id, gameId));
+      return { success: true };
+    }
     if (operation.kind === "close" || operation.kind === "reopen") {
       await tx.update(games).set({ state: operation.kind === "close" ? "registrations_closed" : "registrations_open", updatedAt: now })
         .where(eq(games.id, gameId));

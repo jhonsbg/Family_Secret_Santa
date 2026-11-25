@@ -1,5 +1,5 @@
 import "server-only";
-import { and, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
 import { authorizeGame, inspectGameAccess } from "../auth/authorization";
 import { tokenDigest } from "../auth/crypto";
 import { lockActiveSession } from "../auth/recovery-store";
@@ -69,7 +69,10 @@ export function participantHome(db: Database, token: string) {
     const [own] = status.wishesEnabled
       ? await tx.select(wishColumns).from(wishlist).where(eq(wishlist.participantId, access.participantId))
       : [];
-    return { ok: true, status, wishes: own ?? emptyWishes } as const;
+    const people = await tx.select({ name: participants.displayName }).from(participants)
+      .where(and(eq(participants.gameId, access.gameId), eq(participants.status, "confirmed")))
+      .orderBy(asc(participants.displayName), asc(participants.id));
+    return { ok: true, status, wishes: own ?? emptyWishes, people } as const;
   });
 }
 

@@ -1,30 +1,35 @@
-# Amigo Secreto · Demo E1.1
+# Amigo Secreto
 
-Necesitas Node.js 20.9 o superior y npm.
+Amigo Secreto organiza el sorteo privado y la revelación de regalos de una familia. La portada lleva a las partidas reales. Para entrar a una partida existente, abre el enlace privado que guardaste y escribe tu PIN.
+
+## Empezar una partida
+
+1. Abre el dominio de la aplicación y pulsa **Crear una partida**. Configura fecha, presupuesto y opciones, elige tu PIN y guarda tu enlace privado y tu código de recuperación.
+2. En **Organizar**, genera una invitación general y compártela por WhatsApp. Aprueba las solicitudes o agrega participantes manualmente. Entrega los enlaces personales en privado.
+3. Cada familiar activa su acceso y puede guardar sus deseos. Cierra inscripciones, resuelve las solicitudes pendientes, revisa exclusiones y confirma el sorteo. Cada participante abre su propio sobre desde **Mi partida**.
+4. Genera el enlace de presentación y ábrelo en otro navegador o en un computador conectado al televisor. Controla los turnos desde el panel del organizador y finaliza para mostrar el resumen.
+
+## Ejecutar en local
+
+Usa Node.js 24 y una base PostgreSQL de desarrollo separada. Configura `.env.local` como indica la sección siguiente, incluyendo `AUTH_ORIGIN` y `AUTH_PEPPER`.
 
 ```sh
 npm ci
+npm run db:migrate
 npm run dev
 ```
 
-Abre http://localhost:3000. Usa nombres ficticios en los formularios. La demo conserva cambios durante la navegación en una misma pestaña y vuelve al estado inicial al recargar.
+Abre http://localhost:3000 si ese es el origen configurado. Puedes crear la primera partida desde la portada con la base recién migrada.
 
-1. En **Invitación**, solicita unirte y cambia a **Organizador** para aprobar la solicitud o probar el registro manual.
-2. En **Organizador**, resuelve las solicitudes pendientes, cierra inscripciones, valida el escenario y confirma el sorteo de demo.
-3. En **Mi partida**, entra como Valentina para editar sus deseos y abrir el sobre del guion.
-4. En **Organizador**, inicia el intercambio. Alterna entre el control y la pantalla pública en la misma pestaña. Prueba adivinar, pausar, posponer y revelar.
+## Publicar desde master
 
-El reparto usa un elenco fijo de cuatro personas. Las altas manuales y la participación del organizador permiten recorrer sus controles sin modificar el reparto de ejemplo. El modo temporal y la activación son interacciones visuales. Los resultados ficticios se sirven bajo demanda, sin permisos ni persistencia.
+Con un proyecto Vercel conectado a GitHub, comprueba que la rama de Production sea `master`, el runtime sea Node.js 24.x y el comando de build sea `npm run build:vercel`. En Production conserva `DATABASE_URL_AUTH_PRODUCTION`, `AUTH_ORIGIN` con el dominio HTTPS canónico y el `AUTH_PEPPER` ya configurado. La URL directa del propietario se conserva en la estación de mantenimiento. Revisa la [guía de operación](docs/E5.1-operacion.md).
 
-```sh
-npm run lint
-npm run typecheck
-npm run build
-```
+Después de revisar los cambios, publica el commit en `master` cuando esté autorizado. Si Vercel no inicia el despliegue por Git, crea un despliegue del commit en el proyecto existente. Comprueba en el panel que figure **Production** y que el SHA coincida. Abre la URL canónica desde un navegador sin sesión y comprueba la portada, el formulario de alta y el acceso privado. Para el primer juego familiar, usa otro navegador o televisor con el enlace de presentación que emite el panel.
+
+Esta actualización reutiliza el esquema de las seis migraciones existentes. El historial de la demo E1.1 permanece en Git. Las pruebas con datos ficticios se ejecutan en una base desechable.
 
 ## E2.1 · Base de datos de desarrollo
-
-La demo anterior arranca sin configurar PostgreSQL. Las operaciones de persistencia se ejecutan desde Node y carecen de rutas, acciones web o conexión con la interfaz.
 
 1. Crea en Neon una rama de desarrollo independiente y una base vacía llamada `Family_Secret_Santa`. Usa un rol de esa rama con permiso para crear los objetos de la migración. Copia la URL **directa**, sin pooler, de esa base.
 2. Copia `.env.example` a `.env.local` y asigna la URL a `DATABASE_URL_DEV`. Conserva ese archivo local. Puedes usar también PostgreSQL local con el mismo nombre de base.
@@ -33,7 +38,6 @@ La demo anterior arranca sin configurar PostgreSQL. Las operaciones de persisten
 ```sh
 npm ci
 npm run db:migrate
-npm run db:seed
 ```
 
 El cliente valida el certificado TLS de Neon. Las herramientas rechazan producción, endpoints de pooler y bases con nombres distintos del esperado. Usa una rama y un rol separados para que la configuración de desarrollo tampoco tenga acceso operativo a datos de producción.
@@ -83,7 +87,7 @@ Para repetir desde cero usa `npm run db:reset` en la base de pruebas, elimina tu
 
 El tráfico web fuera de `next dev` usa `DATABASE_URL_AUTH` con el hostname agrupado de Neon y TLS. En desarrollo, si omites esa variable, el flujo web usa la URL directa local o de Neon. Conserva la URL directa para migraciones. No uses credenciales reales en las pruebas.
 
-Con PostgreSQL local y una base desechable `amigo_secreto_test`, configura `DATABASE_URL_TEST` como se explica en E2.1 y ejecuta `npm run test:auth` y `npm run test:db`. El flujo de E1.1 continúa en sus rutas de demo y usa sus propios datos ficticios.
+Con PostgreSQL local y una base desechable `amigo_secreto_test`, configura `DATABASE_URL_TEST` como se explica en E2.1 y ejecuta `npm run test:auth` y `npm run test:db`.
 
 ## E2.3 · Partidas reales de desarrollo
 
@@ -112,7 +116,7 @@ npx playwright install chromium
 E2E_ORIGIN=http://localhost:3000 npm run test:registration:browser
 ```
 
-E1.1 sigue en las rutas de demostración. E2.3 guarda la configuración de listas de deseos y adivinanzas para etapas posteriores.
+La aplicación utiliza la configuración de listas de deseos y adivinanzas en el flujo real.
 
 ## E2.4 · Recuperación con cuentas ficticias
 

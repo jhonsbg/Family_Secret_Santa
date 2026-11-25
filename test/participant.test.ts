@@ -102,7 +102,8 @@ test("E3.2 protege la apertura y los deseos por sesión y versión de sorteo", a
     const recipientAccount = members[people.indexOf(recipient)];
     const fresh = await participantHome(peer, a);
     assert.ok(fresh.ok && !fresh.status.opened);
-    assert.ok(!JSON.stringify(fresh).includes(recipient.displayName));
+    assert.deepEqual(Object.keys(fresh.status).sort(), ["editable", "opened", "revision", "sessionView", "version", "wishesEnabled"]);
+    assert.deepEqual(fresh.people.map(({ name }) => name).sort(), people.map(({ displayName }) => displayName).sort());
     assert.deepEqual(await assignedWishes(peer, a, 1), notAllowed);
     assert.deepEqual(await openEnvelope(peer, a, { version: 1, giver: people[1].id }), stale);
     assert.deepEqual(await saveWishes(peer, a, 0, null, makeWishes("Edición vieja")), stale);

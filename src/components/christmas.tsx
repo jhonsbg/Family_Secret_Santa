@@ -1,54 +1,41 @@
 "use client";
 
 import * as Alert from "@radix-ui/react-alert-dialog";
-import { CircleCheck, Gift, Mail, Settings2, Sparkles } from "lucide-react";
+import { CircleCheck, Gift, House, Settings2, Sparkles } from "lucide-react";
 import { motion } from "motion/react";
 import { useReducedMotion } from "@/components/use-reduced-motion";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { Button, buttonVariants } from "./ui/button";
+import { Button } from "./ui/button";
 
 const links = [
-  { href: "/", title: "Invitación", Icon: Mail },
-  { href: "/participante", title: "Mi partida", Icon: Gift },
-  { href: "/organizador", title: "Organizador", Icon: Settings2 },
+  { href: "/", title: "Inicio", Icon: House },
+  { href: "/acceso/cuenta", title: "Mi partida", Icon: Gift },
+  { href: "/partidas/organizar", title: "Organizar", Icon: Settings2 },
 ];
 
 export function AppShell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const reduced = useReducedMotion();
-  const privateAccess = ["/acceso", "/partidas", "/invitacion"].some((route) => path === route || path.startsWith(route + "/"));
   if (path === "/presentacion") return <main id="contenido">{children}</main>;
+  const active = path.startsWith("/acceso") ? "/acceso/cuenta" : path;
   return <>
     <a className="skip" href="#contenido">Saltar al contenido</a>
     <header className="topbar">
       <div className="topbar-inner">
-        <Link href="/" className="brand"><span className="brand-icon"><Gift size={20} /></span> Amigo Secreto</Link>
+        <Link href="/" className="brand"><span className="brand-icon"><Gift size={20} aria-hidden="true" /></span> Amigo Secreto</Link>
         <nav aria-label="Navegación principal">
-          {(privateAccess ? [
-            { href: "/partidas", title: "Partidas", Icon: Gift },
-            { href: "/acceso/cuenta", title: "Mi acceso", Icon: Mail },
-            { href: "/", title: "Ver demo", Icon: Sparkles },
-          ] : [...links, { href: "/partidas", title: "Partida real", Icon: Sparkles }]).map(({ href, title, Icon }) => <Link key={href} href={href} aria-current={path === href ? "page" : undefined}>
-            {path === href && <motion.span className="nav-highlight" layoutId={reduced ? undefined : "active-route"} transition={{ duration: .22 }} />}
+          {links.map(({ href, title, Icon }) => <Link key={href} href={href} aria-current={active === href ? "page" : undefined}>
+            {active === href && <motion.span className="nav-highlight" layoutId={reduced ? undefined : "active-route"} transition={{ duration: .22 }} />}
             <Icon size={16} aria-hidden="true" /><span>{title}</span>
           </Link>)}
         </nav>
-        <span className="demo-label">{privateAccess ? "Partidas reales" : "Datos ficticios"}</span>
       </div>
     </header>
-    <main id="contenido" tabIndex={-1} className={path === "/display" ? "display-wrap" : "container"}>{children}</main>
-    <footer className="footer"><Gift size={16} aria-hidden="true" /> Amigo Secreto {!privateAccess && <span>Demostración E1.1 · Los cambios se pierden al recargar.</span>}</footer>
+    <main id="contenido" tabIndex={-1} className="container">{children}</main>
+    <footer className="footer"><Gift size={16} aria-hidden="true" /> Amigo Secreto</footer>
   </>;
-}
-
-export function RevealStage({ title, children }: { title: string; children: ReactNode }) {
-  return <section className="reveal-stage" aria-live="polite">
-    <div className="stage-ornament" aria-hidden="true"><Sparkles size={37} /></div>
-    <p className="hero-kicker">{title}</p>
-    {children}
-  </section>;
 }
 
 export function Card({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -98,8 +85,4 @@ export function EnvelopeScene({ children, open = false, play = false }: { childr
     <EnvelopeArt open={open} play={play} />
     {children}
   </div>;
-}
-
-export function DemoLink({ href, children, secondary = false }: { href: string; children: ReactNode; secondary?: boolean }) {
-  return <Link href={href} className={buttonVariants({ variant: secondary ? "secondary" : "default" })}>{children}</Link>;
 }

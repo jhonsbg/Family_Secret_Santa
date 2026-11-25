@@ -54,6 +54,18 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
       budgetMin: 25000, budgetMax: 25000, open: true,
     });
 
+    const settings = {
+      kind: "settings", settings: { ...fixture, name: "Intercambio actualizado", budgetMin: 30000, budgetMax: 45000, guessingEnabled: false },
+    } as const;
+    assert.equal(await manageRegistration(peer, other.token, owner.gameId, settings), null);
+    assert.equal(await manageRegistration(peer, "", owner.gameId, settings), null);
+    assert.ok(await manageRegistration(db, created.token, owner.gameId, settings));
+    assert.equal((await organizerPanel(peer, created.token, owner.gameId))?.game.guessingEnabled, false);
+    assert.deepEqual(await publicInvitation(peer, token), {
+      name: settings.settings.name, date: fixture.eventAt.toISOString(), timezone: "America/Bogota",
+      budgetMin: 30000, budgetMax: 45000, open: true,
+    });
+
     const repeated = await Promise.all([
       requestRegistration(db, pepper, token, "María Clara", origin),
       requestRegistration(peer, pepper, token, "  MARÍA   CLARA ", origin),
@@ -68,6 +80,7 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
     assert.equal(waiting.status, "pending");
     assert.equal(await authorizeGame(db, applicant.token), null);
     assert.equal(Boolean(await manageRegistration(db, applicant.token, owner.gameId, { kind: "close" })), false);
+    assert.equal(await manageRegistration(db, applicant.token, owner.gameId, settings), null);
     const decisions = await Promise.all([
       manageRegistration(db, created.token, owner.gameId, { kind: "approve", personId: waiting.participantId }),
       manageRegistration(peer, signed.token, owner.gameId, { kind: "approve", personId: waiting.participantId }),
@@ -161,6 +174,8 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
     }
     assert.equal((await organizerPanel(peer, created.token, owner.gameId))?.game.state, "registrations_open");
     assert.equal((await peer.select({ id: invites.id }).from(invites).where(eq(invites.participantId, invitee.id))).length, 0);
+    await db.update(games).set({ state: "drawn" }).where(eq(games.id, owner.gameId));
+    assert.equal(await manageRegistration(peer, created.token, owner.gameId, settings), null);
   } finally {
     try {
       if (gameIds.length) {

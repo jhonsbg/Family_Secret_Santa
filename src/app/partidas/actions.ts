@@ -18,18 +18,11 @@ export async function createGameAction(data: FormData): Promise<Feedback> {
   try {
     const origin = await mutationOrigin();
     if (!origin || await currentGame()) return { error: "Cierra tu sesión actual antes de crear otra partida." };
-    const date = field(data, "date");
-    const budget = field(data, "budget");
-    const eventAt = new Date(date + ":00-05:00");
-    if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(date) || !Number.isFinite(+eventAt)
-      || new Date(+eventAt - 5 * 60 * 60_000).toISOString().slice(0, 16) !== date
-      || !/^\d{1,10}$/.test(budget) || Number(budget) > 2_147_483_647) {
-      return { error: "Revisa la fecha, la hora y el presupuesto en pesos." };
-    }
+    const settings = readSettings(data);
+    if (!settings) return { error: "Revisa la fecha, la hora y el presupuesto en pesos." };
     const result = await createManagedGame(authDatabase(), authPepper(), {
-      name: field(data, "name"), eventAt, budgetMin: Number(budget), budgetMax: Number(budget),
+      ...settings,
       organizerDisplayName: data.get("plays") === "on" ? field(data, "organizer") : undefined,
-      wishesEnabled: data.get("wishes") === "on", guessingEnabled: data.get("guessing") === "on",
       pin: field(data, "pin"), confirmation: field(data, "confirmation"),
       temporary: data.get("temporary") === "on", origin,
     });
@@ -61,8 +54,27 @@ export async function requestRegistrationAction(data: FormData): Promise<Feedbac
   return { error: "No pudimos registrar la solicitud. Revisa si las inscripciones siguen abiertas o consulta al organizador." };
 }
 
+function readSettings(data: FormData) {
+  const date = field(data, "date");
+  const minimum = field(data, "budget");
+  const maximum = field(data, "budgetMax") || minimum;
+  const eventAt = new Date(date + ":00-05:00");
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(date) || !Number.isFinite(+eventAt)
+    || new Date(+eventAt - 5 * 60 * 60_000).toISOString().slice(0, 16) !== date
+    || ![minimum, maximum].every((value) => /^\d{1,10}$/.test(value))
+    || Number(minimum) > Number(maximum) || Number(maximum) > 2_147_483_647) return null;
+  return {
+    name: field(data, "name"), eventAt, budgetMin: Number(minimum), budgetMax: Number(maximum),
+    wishesEnabled: data.get("wishes") === "on", guessingEnabled: data.get("guessing") === "on",
+  };
+}
+
 function parseOperation(data: FormData): OrganizerOperation | null {
   const kind = field(data, "operation");
+  if (kind === "settings") {
+    const settings = readSettings(data);
+    return settings ? { kind, settings } : null;
+  }
   if (kind === "add") return { kind, name: field(data, "name") };
   if (kind === "general" || kind === "close" || kind === "reopen") return { kind };
   const personId = field(data, "personId");
@@ -113,7 +125,9 @@ export async function manageAction(data: FormData): Promise<Feedback> {
       return recovery ? { link: `/acceso/recuperar?asistida=1#${recovery}` } : denied;
     }
     const operation = parseOperation(data);
-    if (!origin || !uuid.test(gameId) || !operation) return denied;
+    if (!origin || !uuid.test(gameId)) return denied;
+    if (!operation) return kind === "settings"
+      ? { error: "Revisa la fecha, la hora y el presupuesto en pesos." } : denied;
     const result = await manageRegistration(authDatabase(), await sessionToken(), gameId, operation);
     if (!result) return denied;
     revalidatePath("/partidas/organizar");

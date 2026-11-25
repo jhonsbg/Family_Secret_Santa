@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useState } from "react";
+import { useActionState, useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
 import { RecoveryCode } from "./recovery-code";
 import { activateAccess, changeAccessPin, loginAccess, signOut } from "./actions";
@@ -28,9 +28,17 @@ export function PrivateAccessLink({ path, label = "Mi enlace privado" }: { path:
   </div>;
 }
 
+function subscribeToLink(onChange: () => void) {
+  window.addEventListener("hashchange", onChange);
+  return () => window.removeEventListener("hashchange", onChange);
+}
+
+const hasPrivateLink = () => /^#[A-Za-z0-9_-]{43}$/.test(window.location.hash);
+const unknownLink = () => null;
+
 export function AccessForm({ activation = false }: { activation?: boolean }) {
   const [state, submit, busy] = useActionState(activation ? activateAccess : loginAccess, {});
-  const linkToken = useRef("");
+  const hasLink = useSyncExternalStore(subscribeToLink, hasPrivateLink, unknownLink);
   useEffect(() => {
     if (state.loginPath) window.history.replaceState(null, "", window.location.pathname);
   }, [state.loginPath]);
@@ -50,10 +58,13 @@ export function AccessForm({ activation = false }: { activation?: boolean }) {
     </div>;
   }
 
+  if (hasLink === null) return <p role="status">Comprobando el enlace…</p>;
+  if (!hasLink) return activation
+    ? <p>Abre el enlace de activación que te dio el organizador.</p>
+    : <p>Para entrar, abre el enlace privado que guardaste al crear o activar tu acceso. Si aún no tienes acceso, usa la invitación que te compartió el organizador.</p>;
+
   return <form className="form-stack" action={(data) => {
-    const fragment = window.location.hash.slice(1);
-    if (fragment) linkToken.current = fragment;
-    data.set("token", linkToken.current);
+    data.set("token", window.location.hash.slice(1));
     submit(data);
   }}>
     <p>{activation ? "Elige un PIN personal de seis dígitos y vuelve a escribirlo para confirmarlo." : "Abre tu enlace privado y escribe tu PIN de seis dígitos."}</p>

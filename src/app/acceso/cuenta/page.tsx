@@ -35,7 +35,13 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       {salida === "pendiente" && <p role="alert">No pudimos cerrar la sesión. Intenta de nuevo antes de devolver el dispositivo.</p>}
       <SignOutForm />
     </Card>
-    {home?.ok && <ParticipantExperience key={home.status.sessionView} initialStatus={home.status} wishes={home.wishes} budget={budget} />}
+    {home?.ok && <>
+      <ParticipantExperience key={home.status.sessionView} initialStatus={home.status} wishes={home.wishes} budget={budget} />
+      <Card>
+        <h2>Participantes confirmados</h2>
+        <ul className="name-list">{home.people.map(({ name }, index) => <li key={index}>{name}</li>)}</ul>
+      </Card>
+    </>}
     {!home?.ok && access.status === "confirmed" && <p role="status">No pudimos cargar tu sobre y tus deseos. Intenta actualizar la página.</p>}
     {(access.organizer || access.status === "confirmed") && <Card><h2>Cambiar mi PIN</h2><ChangePinForm /></Card>}
     <Card><h2>Código de recuperación</h2><ReplaceRecoveryCodeForm /></Card>

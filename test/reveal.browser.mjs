@@ -59,7 +59,8 @@ async function run() {
     let host = await organizer.newPage();
     let display = await television.newPage();
     const event = "[Ficticia] Intercambio " + randomBytes(4).toString("hex");
-    const cast = ["Familiar Zafiro", "Familiar Granate", "Familiar Ámbar"];
+    const cast = ["Familiar Zafiro", "Familiar Granate", "Familiar Ámbar", "Familiar Esmeralda"];
+    const wishes = new Map(cast.map((name, index) => [name, `Libro de prueba ${index + 1}`]));
     const errors = [];
     function watchErrors() {
       host.on("pageerror", () => errors.push("organizador"));
@@ -69,7 +70,15 @@ async function run() {
     await display.clock.install();
 
     stage = "preparar partida y enlace de presentación";
-    await host.goto(new URL("/partidas", base).href);
+    await host.goto(base.href);
+    await host.getByRole("heading", { name: "Una Navidad llena de secretos" }).waitFor();
+    assert.doesNotMatch(await host.locator("body").innerText(), /Datos ficticios|Ver demo|Valentina Reyes/i);
+    for (const width of [320, 390, 1440]) {
+      await host.setViewportSize({ width, height: 844 });
+      assert.ok(await host.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    }
+    await host.setViewportSize({ width: 390, height: 844 });
+    await host.getByRole("link", { name: "Crear una partida", exact: true }).click();
     await host.getByLabel("Nombre de la partida").fill(event);
     await host.getByLabel("Fecha y hora en Bogotá").fill("2027-12-24T19:00");
     await host.getByLabel("Presupuesto sugerido en COP").fill("80000");
@@ -78,17 +87,64 @@ async function run() {
     await host.getByRole("button", { name: "Crear mi partida" }).click();
     const hostLink = await host.getByLabel("Enlace privado", { exact: true }).inputValue();
     await host.getByRole("link", { name: "Abrir panel del organizador" }).click();
-    for (const name of cast) {
-      await host.getByLabel("Nombre para registro manual").fill(name);
-      await host.getByRole("button", { name: "Agregar participante", exact: true }).click();
-      await host.getByText("Gestionar a " + name, { exact: true }).waitFor();
+    stage = "editar presupuesto, inscribir y activar";
+    await host.getByLabel("Presupuesto sugerido en COP").fill("90000");
+    await host.getByRole("button", { name: "Guardar configuración" }).click();
+    await host.getByText(/90[.\s]?000 COP/).waitFor();
+    await host.reload();
+    assert.equal(await host.getByLabel("Presupuesto sugerido en COP").inputValue(), "90000");
+    await confirm(host, "Generar enlace general");
+    const general = await host.getByLabel("Enlace general", { exact: true }).inputValue();
+    const privateLinks = new Map();
+    for (const [index, name] of cast.entries()) {
+      stage = "inscribir y activar participante " + (index + 1);
+      const row = host.locator(".person-row").filter({ hasText: name });
+      const member = await browser.newPage({ reducedMotion: "reduce" });
+      await member.routeWebSocket("**/_next/webpack-hmr**", () => {});
+      if (index < 2) {
+        await member.goto(general);
+        await member.getByLabel("Tu nombre").fill(name);
+        await member.getByRole("button", { name: "Solicitar inscripción" }).click();
+        await member.getByRole("link", { name: "Activar mi acceso individual" }).click();
+      } else {
+        await host.getByLabel("Nombre para registro manual").fill(name);
+        await host.getByRole("button", { name: "Agregar participante", exact: true }).click();
+        await host.getByText("Gestionar a " + name, { exact: true }).click();
+        await confirm(host, "Generar o renovar enlace personal");
+        await member.goto(await row.getByLabel("Enlace privado", { exact: true }).inputValue());
+      }
+      await member.getByLabel("PIN nuevo", { exact: true }).fill(pin);
+      await member.getByLabel("Confirma el PIN nuevo", { exact: true }).fill(pin);
+      await member.getByRole("button", { name: "Activar mi acceso" }).click();
+      const privatePath = await member.getByRole("link", { name: "Mi enlace privado", exact: true }).getAttribute("href");
+      assert.ok(privatePath);
+      privateLinks.set(name, new URL(privatePath, base).href);
+      await member.getByRole("link", { name: "Continuar a mi acceso" }).click();
+      if (index < 2) {
+        await member.getByText(/Solicitud pendiente/).waitFor();
+        assert.equal(await member.getByRole("heading", { name: "Mis deseos" }).count(), 0);
+        stage = "aprobar participante " + (index + 1);
+        await host.reload();
+        await host.getByText("Gestionar a " + name, { exact: true }).click();
+        await confirm(host, "Aprobar solicitud");
+        await row.getByText("Confirmado · Acceso activado", { exact: true }).waitFor();
+        await member.reload();
+      }
+      stage = "guardar deseos del participante " + (index + 1);
+      await member.bringToFront();
+      await member.getByLabel("Qué me gustaría recibir").fill(wishes.get(name));
+      await member.getByRole("button", { name: "Guardar mis deseos" }).click();
+      await member.getByText("Tus deseos quedaron guardados.").waitFor();
+      await member.close();
     }
+    stage = "preparar la presentación en otro navegador";
     await host.getByRole("button", { name: "Generar enlace de presentación", exact: true }).click();
     const link = await host.getByLabel("Enlace de presentación", { exact: true }).inputValue();
     const api = new URL("/presentacion/estado", base).href;
     const header = { authorization: "Bearer " + new URL(link).hash.slice(1) };
     await display.goto(link);
-    await display.getByText(event, { exact: true }).waitFor();
+    await display.bringToFront();
+    await display.getByText(event, { exact: true }).waitFor({ timeout: 60000 });
     await display.getByText(/Esperando que el organizador/).waitFor();
     const showFull = display.getByRole("button", { name: "Pantalla completa", exact: true });
     await showFull.focus();
@@ -108,7 +164,41 @@ async function run() {
 
     stage = "sorteo, apertura y privacidad de turno";
     await confirm(host, "Cerrar inscripciones");
+    await host.getByLabel("Primera persona").selectOption({ label: cast[0] });
+    await host.getByLabel("Segunda persona").selectOption({ label: cast[1] });
+    await host.getByRole("button", { name: "Agregar exclusión" }).click();
+    await host.getByRole("button", { name: "Quitar exclusión" }).waitFor();
     await confirm(host, "Ejecutar sorteo");
+    await host.getByRole("button", { name: "Guardar configuración" }).waitFor({ state: "detached" });
+    assert.equal((await host.request.get(new URL("/acceso/cuenta/estado", base).href)).status(), 401);
+    const expectedGivers = new Map();
+    for (const [giver, privateLink] of privateLinks) {
+      const member = await browser.newPage({ reducedMotion: "reduce" });
+      await member.routeWebSocket("**/_next/webpack-hmr**", () => {});
+      await member.goto(privateLink);
+      await member.getByLabel("PIN personal").fill(pin);
+      await member.getByRole("button", { name: "Entrar", exact: true }).click();
+      await member.getByRole("heading", { name: "Mi sobre secreto" }).waitFor();
+      const response = await member.reload();
+      assert.ok(response?.ok());
+      const html = await response.text();
+      assert.ok([...wishes.values()].filter((wish) => wish !== wishes.get(giver)).every((wish) => !html.includes(wish)));
+      assert.equal(await member.locator(".envelope-result").count(), 0);
+      const metadata = await (await member.request.get(new URL("/acceso/cuenta/estado", base).href)).json();
+      assert.deepEqual(Object.keys(metadata).sort(), ["editable", "opened", "revision", "sessionView", "version", "wishesEnabled"]);
+      await member.bringToFront();
+      await member.getByRole("button", { name: "Abrir mi sobre" }).click();
+      const result = member.locator(".envelope-result strong");
+      await result.waitFor();
+      const target = (await result.textContent()).slice(0, -1);
+      assert.ok(cast.includes(target) && target !== giver);
+      assert.ok(!expectedGivers.has(target));
+      assert.ok(!(cast.slice(0, 2).includes(giver) && cast.slice(0, 2).includes(target)));
+      expectedGivers.set(target, giver);
+      await member.getByRole("button", { name: "Ver sus deseos" }).click();
+      await member.getByText(wishes.get(target), { exact: true }).waitFor();
+      await member.close();
+    }
     await confirm(host, "Iniciar intercambio");
     await display.getByRole("heading", { name: "Que empiece el intercambio" }).waitFor();
     await host.getByRole("button", { name: "Iniciar siguiente turno" }).click();
@@ -191,7 +281,7 @@ async function run() {
     await display.bringToFront();
     await display.locator(".reveal-result strong").waitFor();
     const firstResult = await display.locator(".reveal-result strong").textContent();
-    assert.ok(cast.includes(firstResult) && firstResult !== recipient);
+    assert.equal(firstResult, expectedGivers.get(recipient));
     const animatedScene = display.locator('[data-scene="revealed"] [data-entry="animated"]');
     assert.equal(await animatedScene.count(), 1);
     await animatedScene.evaluate((element) => { element.dataset.testMoment = "original"; });
@@ -221,9 +311,7 @@ async function run() {
     await display.getByText("Última entrega · " + firstResult + " le regaló a " + recipient, { exact: true }).waitFor();
 
     stage = "resumen, tamaño y revocación";
-    const thirdPerson = cast.find((name) => name !== recipient && name !== firstResult);
-    const expectedGivers = new Map([[firstResult, thirdPerson], [thirdPerson, recipient]]);
-    for (let index = 0; index < 2; index++) {
+    for (let index = 0; index < cast.length - 1; index++) {
       if (index === 1) await display.emulateMedia({ reducedMotion: "reduce" });
       await host.getByRole("button", { name: "Iniciar siguiente turno" }).click();
       await host.getByRole("heading", { name: /^Recibe / }).waitFor();
@@ -243,7 +331,8 @@ async function run() {
     await confirm(host, "Finalizar intercambio");
     await display.bringToFront();
     await display.getByRole("heading", { name: "¡Feliz Navidad!" }).waitFor();
-    assert.equal(await display.locator(".result-list li").count(), 3);
+    assert.equal(await display.locator(".result-list li").count(), cast.length);
+    await host.getByRole("heading", { name: "Resumen del intercambio" }).waitFor();
     assert.equal(await host.getByRole("button", { name: "Revelar identidad" }).count(), 0);
     for (const width of [320, 390, 1440, 1920, 3840]) {
       await display.setViewportSize({ width, height: width >= 1440 ? width * 9 / 16 : 844 });
@@ -268,7 +357,7 @@ async function run() {
 try {
   await run();
 } catch (error) {
-  const detail = String(error).split("\n")[0].replace(/[A-Za-z0-9_-]{43}/g, "[credencial]").replace(/\b\d{6}\b/g, "[PIN]");
+  const detail = String(error).split("\n").slice(0, 6).join(" ").replace(/[A-Za-z0-9_-]{43}/g, "[credencial]").replace(/\b\d{6}\b/g, "[PIN]");
   console.error("Falló la prueba de navegador en la etapa:", stage, detail);
   process.exitCode = 1;
 } finally {

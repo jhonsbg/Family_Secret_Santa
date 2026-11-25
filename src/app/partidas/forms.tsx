@@ -27,7 +27,26 @@ export function ShareLink({ path, general = false, origin, label = general ? "En
   </div>;
 }
 
-export function CreateGameForm({ origin }: { origin: string }) {
+type GameSettingsFieldsProps = {
+  name: string; eventAt: Date; budgetMin: number; budgetMax: number; wishesEnabled: boolean; guessingEnabled: boolean;
+};
+
+export function GameSettingsFields({ game }: { game?: GameSettingsFieldsProps }) {
+  const localDate = game ? new Date(game.eventAt.getTime() - 5 * 60 * 60_000).toISOString().slice(0, 16) : undefined;
+  return <>
+    <label>Nombre de la partida<input name="name" required maxLength={100} defaultValue={game?.name} /></label>
+    <label>Fecha y hora en Bogotá<input name="date" type="datetime-local" required defaultValue={localDate} /></label>
+    <div className="two-grid">
+      <label>Presupuesto sugerido en COP<input name="budget" type="number" inputMode="numeric" min="0" max="2147483647" required defaultValue={game?.budgetMin} /></label>
+      <label>Tope del rango en COP (opcional)<input name="budgetMax" type="number" inputMode="numeric" min="0" max="2147483647"
+        defaultValue={game && game.budgetMax !== game.budgetMin ? game.budgetMax : undefined} /></label>
+    </div>
+    <label className="check"><input type="checkbox" name="wishes" defaultChecked={game?.wishesEnabled ?? true} /> Habilitar listas de deseos</label>
+    <label className="check"><input type="checkbox" name="guessing" defaultChecked={game?.guessingEnabled ?? true} /> Habilitar adivinanzas</label>
+  </>;
+}
+
+export function CreateGameForm({ origin, sessionDestination }: { origin: string; sessionDestination?: string }) {
   const [plays, setPlays] = useState(false);
   const [state, submit, busy] = useActionState((_state: Feedback, data: FormData) => createGameAction(data), {});
   if (state.link) return <div className="form-stack">
@@ -41,17 +60,15 @@ export function CreateGameForm({ origin }: { origin: string }) {
       window.location.replace("/partidas/organizar");
     }}>Abrir panel del organizador</a>
   </div>;
+  if (sessionDestination) return <div className="form-stack">
+    <h2>Ya tienes una sesión abierta</h2>
+    <p>Para crear otra partida, cierra tu sesión desde tu cuenta.</p>
+    <a className="button button-primary" href={sessionDestination}>Volver a mi partida</a>
+  </div>;
   return <form className="form-stack" action={(data) => submit(data)}>
-    <label>Nombre de la partida<input name="name" required maxLength={100} /></label>
-    <div className="two-grid">
-      <label>Fecha y hora en Bogotá<input name="date" type="datetime-local" required /></label>
-      <label>Presupuesto sugerido en COP<input name="budget" type="number" inputMode="numeric" min="0" max="2147483647" required /></label>
-    </div>
+    <GameSettingsFields />
     <label className="check"><input type="checkbox" name="plays" checked={plays} onChange={(event) => setPlays(event.target.checked)} /> También quiero participar</label>
     {plays && <label>Tu nombre como participante<input name="organizer" required maxLength={60} /></label>}
-    <label className="check"><input type="checkbox" name="wishes" defaultChecked /> Habilitar listas de deseos</label>
-    <label className="check"><input type="checkbox" name="guessing" defaultChecked /> Habilitar adivinanzas</label>
-    <p>Mensajes anónimos y pistas estarán disponibles en una etapa futura.</p>
     <div className="two-grid">
       <label>PIN de administración<input type="password" name="pin" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="new-password" required /></label>
       <label>Confirma tu PIN<input type="password" name="confirmation" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="new-password" required /></label>

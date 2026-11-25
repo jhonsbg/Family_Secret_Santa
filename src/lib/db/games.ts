@@ -2,7 +2,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import type { Database, Transaction } from "./connection";
 import { games, identities, participants } from "./schema";
 
-type GameSettings = Pick<typeof games.$inferInsert, "name" | "eventAt" | "timezone" | "budgetMin" | "budgetMax" | "wishesEnabled" | "guessingEnabled">;
+export type GameSettings = Pick<typeof games.$inferInsert, "name" | "eventAt" | "timezone" | "budgetMin" | "budgetMax" | "wishesEnabled" | "guessingEnabled">;
 export type CreateGame = GameSettings & { organizerDisplayName?: string };
 
 export function displayName(value: string, limit = 60) {
@@ -11,7 +11,7 @@ export function displayName(value: string, limit = 60) {
   return name;
 }
 
-function validateSettings(input: GameSettings) {
+export function validateGameSettings(input: GameSettings) {
   const name = displayName(input.name, 100);
   const timezone = input.timezone ?? "America/Bogota";
   if (!(input.eventAt instanceof Date) || !Number.isFinite(input.eventAt.valueOf())) {
@@ -36,7 +36,7 @@ function validateSettings(input: GameSettings) {
 export const editableGameStates = ["registrations_open", "registrations_closed"] as const;
 
 export async function createGameRecord(tx: Transaction, input: CreateGame, activated = false) {
-  const settings = validateSettings(input);
+  const settings = validateGameSettings(input);
   const organizer = input.organizerDisplayName === undefined ? undefined : displayName(input.organizerDisplayName);
   const [identity] = await tx.insert(identities).values({}).returning();
   const [game] = await tx.insert(games).values({ ...settings, adminIdentityId: identity.id }).returning();
@@ -62,7 +62,7 @@ export function gameRepository(db: Database) {
       return db.select().from(games).where(eq(games.adminIdentityId, adminIdentityId)).orderBy(desc(games.createdAt), desc(games.id));
     },
     async update(id: string, input: GameSettings) {
-      const settings = validateSettings(input);
+      const settings = validateGameSettings(input);
       const [game] = await db.update(games).set({ ...settings, updatedAt: new Date() })
         .where(and(eq(games.id, id), inArray(games.state, editableGameStates))).returning();
       return game ?? null;

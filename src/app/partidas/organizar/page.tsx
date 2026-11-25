@@ -10,7 +10,7 @@ import { organizerReveal } from "@/lib/reveal/snapshot";
 import { RevealPanel } from "./reveal-panel";
 import { DrawPanel } from "./draw-panel";
 import { organizerDrawStatus } from "@/lib/draw/service";
-import { OperationForm } from "../forms";
+import { GameSettingsFields, OperationForm } from "../forms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Organizar partida · Amigo Secreto", robots: { index: false, follow: false } };
@@ -46,6 +46,16 @@ export default async function OrganizerPage() {
   const { game, people, general } = panel;
   const open = game.state === "registrations_open";
   const editable = open || game.state === "registrations_closed";
+  const stages = [
+    { id: "preparacion", label: "Preparación", detail: "Fecha e invitación" },
+    { id: "inscripciones", label: "Inscripciones", detail: "Solicitudes y participantes" },
+    { id: "sorteo", label: "Sorteo", detail: "Exclusiones y sobres" },
+    { id: "intercambio", label: "Intercambio", detail: "Turnos y pantalla pública" },
+  ];
+  const stageLabel = {
+    registrations_open: "Inscripciones abiertas", registrations_closed: "Inscripciones cerradas",
+    drawn: "Sorteo realizado", revealing: "Intercambio en curso", finished: "Intercambio finalizado",
+  };
   const confirmed = people.filter((person) => person.status === "confirmed");
   const pending = people.filter((person) => person.status === "pending");
   const archived = people.filter((person) => person.status === "rejected" || person.status === "withdrawn");
@@ -96,25 +106,39 @@ export default async function OrganizerPage() {
         <p className="hero-kicker"><Settings2 aria-hidden="true" size={17} /> Organizador</p>
         <h1>{game.name}</h1>
         <p>{formatEvent(game.eventAt, game.timezone)} · {formatBudget(game.budgetMin, game.budgetMax)}</p>
-        <Pill>{open ? "Inscripciones abiertas" : "Inscripciones cerradas"}</Pill>
+        <Pill>{stageLabel[game.state]}</Pill>
       </div>
       <a href="/acceso/cuenta" className="button button-secondary">Mi acceso</a>
     </section>
-    <RevealPanel {...props} timezone={game.timezone} state={reveal} drawVersion={drawStatus.currentVersion} />
-    <DrawPanel {...props} status={drawStatus} />
+    <nav className="stage-nav" aria-label="Etapas de la partida">
+      <ol>{stages.map(({ id, label, detail }) => <li key={id}>
+        <a href={`#${id}`}><span><strong>{label}</strong><small>{detail}</small></span></a>
+      </li>)}</ol>
+    </nav>
     <div className="admin-grid">
-      <Card className="organizer-station form-stack">
-        <div className="card-heading"><span className="tile-icon"><Users aria-hidden="true" size={21} /></span><h2>Participantes · {confirmed.length + pending.length}</h2></div>
-        {section("Confirmados", confirmed)}
-        {section("Solicitudes pendientes", pending)}
-        {!!archived.length && section("Historial", archived)}
-      </Card>
-      <div className="form-stack">
+      <section id="preparacion" tabIndex={-1} className="form-stack" aria-label="Preparación">
+        {editable && <Card className="organizer-station form-stack">
+          <h2>Configuración de la partida</h2>
+          <OperationForm {...props} operation="settings" label="Guardar configuración">
+            <GameSettingsFields key={game.updatedAt.toISOString()} game={{
+              name: game.name, eventAt: game.eventAt, budgetMin: game.budgetMin, budgetMax: game.budgetMax,
+              wishesEnabled: game.wishesEnabled, guessingEnabled: game.guessingEnabled,
+            }} />
+          </OperationForm>
+        </Card>}
         <Card className="organizer-station form-stack">
           <h2>Invitación general</h2>
           <p>Comparte el evento con tu familia. Generar un enlace nuevo desactiva el anterior.</p>
           {general && <Pill>Vigente hasta el {formatEvent(general.expiresAt, game.timezone)}</Pill>}
           {editable && <OperationForm {...props} operation="general" label="Generar enlace general" confirmation="Si ya compartiste un enlace general, tendrás que compartir el nuevo." />}
+        </Card>
+      </section>
+      <section id="inscripciones" tabIndex={-1} className="form-stack" aria-label="Inscripciones">
+        <Card className="organizer-station form-stack">
+          <div className="card-heading"><span className="tile-icon"><Users aria-hidden="true" size={21} /></span><h2>Participantes · {confirmed.length + pending.length}</h2></div>
+          {section("Confirmados", confirmed)}
+          {section("Solicitudes pendientes", pending)}
+          {!!archived.length && section("Historial", archived)}
         </Card>
         <Card className="organizer-station form-stack">
           <h2>Inscripciones</h2>
@@ -127,7 +151,9 @@ export default async function OrganizerPage() {
               ? "Se detendrán las nuevas inscripciones. Las solicitudes pendientes se podrán resolver."
               : "El enlace general vigente volverá a aceptar solicitudes."} />}
         </Card>
-      </div>
+      </section>
     </div>
+    <div id="sorteo" tabIndex={-1}><DrawPanel {...props} status={drawStatus} /></div>
+    <div id="intercambio" tabIndex={-1}><RevealPanel {...props} timezone={game.timezone} state={reveal} drawVersion={drawStatus.currentVersion} /></div>
   </div>;
 }

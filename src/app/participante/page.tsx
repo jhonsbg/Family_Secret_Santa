@@ -1,3 +1,5 @@
-export const metadata = { title: "Mi partida · Amigo Secreto" };
+import { redirect } from "next/navigation";
 
-export { Participant as default } from "@/features/demo/participant";
+export default function LegacyPage() {
+  redirect("/acceso/cuenta");
+}

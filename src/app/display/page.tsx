@@ -1,3 +1,5 @@
-export const metadata = { title: "Revelación · Amigo Secreto" };
+import { redirect } from "next/navigation";
 
-export { Display as default } from "@/features/demo/reveal";
+export default function LegacyPage() {
+  redirect("/presentacion");
+}

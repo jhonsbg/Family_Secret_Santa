@@ -1,3 +1,5 @@
-export const metadata = { title: "Organizador · Amigo Secreto" };
+import { redirect } from "next/navigation";
 
-export { Organizer as default } from "@/features/demo/organizer";
+export default function LegacyPage() {
+  redirect("/partidas/organizar");
+}

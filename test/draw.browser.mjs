@@ -65,8 +65,10 @@ async function run() {
     await host.getByText("Sorteo vigente · versión 2", { exact: true }).waitFor();
     await member.reload();
     await member.getByText(/Se realizó un nuevo sorteo/).waitFor();
-    assert.equal(await member.getByText("Familiar segundo", { exact: true }).count(), 0);
-    assert.equal(await member.getByText("Familiar tercero", { exact: true }).count(), 0);
+    assert.equal(await member.locator(".envelope-result").count(), 0);
+    const status = await member.request.get(new URL("/acceso/cuenta/estado", base).href);
+    assert.ok(status.ok());
+    assert.deepEqual(Object.keys(await status.json()).sort(), ["editable", "opened", "revision", "sessionView", "version", "wishesEnabled"]);
     await confirm(host, "Anular para editar exclusiones");
     await host.getByRole("button", { name: "Quitar exclusión", exact: true }).waitFor();
     await host.getByRole("button", { name: "Quitar exclusión", exact: true }).click();
