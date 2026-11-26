@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { PinField, PrivateAccessLink } from "../access-form";
+import { PinField } from "@/components/pin-field";
 import { RecoveryCode } from "../recovery-code";
 import { redeemRecoveryAction, replaceRecoveryCodeAction, type RecoveryFeedback } from "../recovery-actions";
 
@@ -10,13 +10,12 @@ export function RecoveryForm({ assisted }: { assisted: boolean }) {
   const [state, submit, busy] = useActionState((_state: RecoveryFeedback, data: FormData) => redeemRecoveryAction(data), {});
   const invitation = useRef("");
   useEffect(() => {
-    if (state.loginPath) window.history.replaceState(null, "", window.location.pathname);
-  }, [state.loginPath]);
+    if (state.recoveryCode) window.history.replaceState(null, "", window.location.pathname);
+  }, [state.recoveryCode]);
 
-  if (state.loginPath && state.recoveryCode) return <div className="form-stack">
+  if (state.recoveryCode) return <div className="form-stack">
     <h2>Acceso recuperado</h2>
-    <p>Guarda tu enlace nuevo. Las sesiones y el enlace de acceso anteriores han caducado.</p>
-    <PrivateAccessLink path={state.loginPath} label="Mi nuevo enlace privado" />
+    <p>Las sesiones anteriores se cerraron. Vuelve a entrar con tu nombre y tu PIN nuevo.</p>
     <RecoveryCode code={state.recoveryCode} />
     <a className="button button-primary" href="/acceso/cuenta" onClick={(event) => {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;

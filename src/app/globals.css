@@ -96,6 +96,8 @@ p { line-height: 1.55; }
 .form-stack > .button { justify-self: start; }
 label { display: grid; min-width: 0; gap: 6px; font-weight: 650; }
 input:not([type="checkbox"]), textarea, select { width: 100%; min-width: 0; max-width: 100%; min-height: 44px; border: 1px solid var(--input-line); border-radius: 8px; background: #fffcf7; padding: 8px 10px; font-weight: 450; color: var(--charcoal); }
+.pin-field { display: grid; gap: 6px; }
+.pin-field small { color: var(--muted); font-size: .875rem; }
 textarea { resize: vertical; }
 .check { min-height: 44px; display: flex; align-items: center; gap: 9px; cursor: pointer; }
 .check input { width: 20px; height: 20px; accent-color: var(--forest); flex: none; }

@@ -10,7 +10,7 @@ import { organizerReveal } from "@/lib/reveal/snapshot";
 import { RevealPanel } from "./reveal-panel";
 import { DrawPanel } from "./draw-panel";
 import { organizerDrawStatus } from "@/lib/draw/service";
-import { GameSettingsFields, OperationForm } from "../forms";
+import { GameSettingsFields, OperationForm, ShareLink } from "../forms";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Organizar partida · Amigo Secreto", robots: { index: false, follow: false } };
@@ -128,6 +128,8 @@ export default async function OrganizerPage() {
         </Card>}
         <Card className="organizer-station form-stack">
           <h2>Invitación general</h2>
+          <p>Comparte este enlace de entrada con quienes ya tienen un PIN. Es el mismo para toda la partida.</p>
+          <ShareLink path={`/acceso?partida=${game.id}`} origin={origin} label="Enlace de entrada de la partida" />
           <p>Comparte el evento con tu familia. Generar un enlace nuevo desactiva el anterior.</p>
           {general && <Pill>Vigente hasta el {formatEvent(general.expiresAt, game.timezone)}</Pill>}
           {editable && <OperationForm {...props} operation="general" label="Generar enlace general" confirmation="Si ya compartiste un enlace general, tendrás que compartir el nuevo." />}

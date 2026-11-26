@@ -24,7 +24,7 @@ Aplicación web navideña familiar para gestionar un sorteo privado de amigo sec
 
 - Solo **un** administrador por partida, que opcionalmente puede participar.
 - Inscripción híbrida: solicitud con aprobación o agregado manual confirmado automáticamente.
-- Acceso personal por enlace privado + PIN de seis dígitos; sesión temporal para celular prestado.
+- Acceso por nombre dentro de una partida y PIN de seis dígitos; los enlaces individuales solo activan o recuperan accesos; sesión temporal para celular prestado.
 - Una persona confirmada participa aunque todavía no haya activado acceso.
 - Cada jugador regala a exactamente una persona distinta y recibe exactamente un regalo; restricciones respetadas.
 - Asignaciones secretas para todos, **incluido el administrador**; solo el servidor puede resolver autorizaciones.

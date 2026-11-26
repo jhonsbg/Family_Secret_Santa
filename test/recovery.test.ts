@@ -22,7 +22,7 @@ test("E2.4 recupera cuentas y conserva el alcance de sesión en PostgreSQL", asy
   const origin = newToken();
   const pin = String(randomBytes(4).readUInt32BE() % 1_000_000).padStart(6, "0");
   const updatedPin = pin === "000000" ? "000001" : "000000";
-  const setting = { name: "[Ficticia] Recuperación E2.4", eventAt: new Date("2027-12-25T00:00:00Z"),
+  const setting = { organizerName: "Organizador de prueba", name: "[Ficticia] Recuperación E2.4", eventAt: new Date("2027-12-25T00:00:00Z"),
     pin, confirmation: pin, budgetMin: 10000, budgetMax: 10000, origin, temporary: false };
   const gameIds: string[] = [];
   const adminIds: string[] = [];
@@ -80,9 +80,8 @@ test("E2.4 recupera cuentas y conserva el alcance de sesión en PostgreSQL", asy
       assert.ok(restored?.session.temporary);
       assert.equal(await authorizeAccount(db, created.token), null);
       assert.equal(Boolean(await recoverAccess(peer, pepper, recovery(created.recoveryCode))), false);
-      assert.equal(Boolean(await login(db, pepper, { link: created.loginToken, pin: updatedPin, temporary: false, origin })), false);
-      assert.equal(Boolean(await login(peer, pepper, { link: active.loginToken, pin, temporary: false, origin })), false);
-      assert.ok(await login(peer, pepper, { link: active.loginToken, pin: updatedPin, temporary: false, origin }));
+      assert.equal(Boolean(await login(peer, pepper, { name: setting.organizerName, game: setting.name, gameId: owner.gameId, pin, temporary: false, origin })), false);
+      assert.ok(await login(peer, pepper, { name: setting.organizerName, game: setting.name, gameId: owner.gameId, pin: updatedPin, temporary: false, origin }));
     });
 
     await t.test("el código de otro usuario y la emisión fuera de su partida se rechazan", async () => {

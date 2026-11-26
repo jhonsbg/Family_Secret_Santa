@@ -4,7 +4,7 @@ import { authPepper } from "@/lib/auth/crypto";
 import { recoverAccess, replaceRecoveryCode } from "@/lib/auth/recovery";
 import { authDatabase, currentGame, mutationOrigin, sessionToken, writeSession } from "@/lib/auth/web";
 
-export type RecoveryFeedback = { loginPath?: string; recoveryCode?: string; error?: string };
+export type RecoveryFeedback = { recoveryCode?: string; error?: string };
 
 function field(data: FormData, key: string) {
   const value = data.get(key);
@@ -24,7 +24,7 @@ export async function redeemRecoveryAction(data: FormData): Promise<RecoveryFeed
     });
     if (!result) return denied;
     await writeSession(result);
-    return { recoveryCode: result.recoveryCode, loginPath: `/acceso?enlace=1#${result.loginToken}` };
+    return { recoveryCode: result.recoveryCode };
   } catch {
     return denied;
   }

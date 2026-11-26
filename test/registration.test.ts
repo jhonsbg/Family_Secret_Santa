@@ -5,12 +5,12 @@ import { test } from "node:test";
 import { eq, inArray, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { authorizeAccount, authorizeGame, authorizeOrganizer } from "../src/lib/auth/authorization";
-import { login } from "../src/lib/auth/credentials";
+import { login, setMissingLoginName } from "../src/lib/auth/credentials";
 import { newToken, tokenDigest } from "../src/lib/auth/crypto";
 import { activate, inviteParticipant } from "../src/lib/auth/invitations";
 import { revokeSession } from "../src/lib/auth/sessions";
 import { connectDatabase, developmentConnectionConfig, openDevelopmentDatabase } from "../src/lib/db/connection";
-import { games, identities, invites, participants } from "../src/lib/db/schema";
+import { games, identities, invites, participants, pinCredentials } from "../src/lib/db/schema";
 import { createManagedGame, manageRegistration, organizerPanel, publicInvitation, requestRegistration } from "../src/lib/registration/service";
 
 test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () => {
@@ -21,7 +21,7 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
   const pepper = randomBytes(32);
   const origin = newToken();
   const pin = String(randomBytes(4).readUInt32BE() % 1_000_000).padStart(6, "0");
-  const fixture = { name: "[Ficticia] E2.3", eventAt: new Date("2027-12-25T00:00:00Z"),
+  const fixture = { organizerName: "Organizador de prueba", name: "[Ficticia] E2.3", eventAt: new Date("2027-12-25T00:00:00Z"),
     budgetMin: 25000, budgetMax: 25000, pin, confirmation: pin, temporary: false, origin };
   const gameIds: string[] = [];
   const adminIds: string[] = [];
@@ -35,7 +35,7 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
     gameIds.push(owner.gameId);
     adminIds.push(owner.session.identityId);
     assert.equal(owner.participantId, null);
-    const signed = await login(peer, pepper, { link: created.loginToken, pin, temporary: false, origin });
+    const signed = await login(peer, pepper, { name: fixture.organizerName, game: "", gameId: owner.gameId, pin, temporary: false, origin });
     assert.ok(signed && await authorizeOrganizer(peer, signed.token, owner.gameId));
 
     const other = await createManagedGame(db, pepper, { ...fixture, organizerDisplayName: "Organizador que participa" });
@@ -46,11 +46,23 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
     adminIds.push(otherOwner.session.identityId);
 
     assert.equal(Boolean(await manageRegistration(peer, other.token, owner.gameId, { kind: "close" })), false);
+    const sharedName = { name: fixture.organizerName, game: fixture.name, pin, temporary: false, origin };
+    assert.equal(await login(peer, pepper, sharedName), null);
+    const scoped = await login(peer, pepper, { ...sharedName, name: "  ORGANIZADOR   de prueba  ", gameId: otherOwner.gameId });
+    assert.ok(scoped);
+    assert.equal((await authorizeAccount(peer, scoped.token))?.gameId, otherOwner.gameId);
+    assert.equal(await login(peer, pepper, { ...sharedName, gameId: newToken() }), null);
+    await db.update(pinCredentials).set({ loginName: null }).where(eq(pinCredentials.identityId, otherOwner.session.identityId));
+    assert.equal(await login(peer, pepper, { ...sharedName, gameId: otherOwner.gameId }), null);
+    assert.equal(await setMissingLoginName(peer, "", "Otro nombre"), false);
+    assert.ok(await setMissingLoginName(peer, other.token, "Organizadora antigua"));
+    assert.equal(await setMissingLoginName(peer, other.token, "Otro nombre"), false);
+    assert.ok(await login(peer, pepper, { ...sharedName, name: "Organizadora antigua", gameId: otherOwner.gameId }));
     const general = await manageRegistration(db, created.token, owner.gameId, { kind: "general" });
     assert.ok(general?.shareToken);
     const token = general.shareToken;
     assert.deepEqual(await publicInvitation(peer, token), {
-      name: fixture.name, date: fixture.eventAt.toISOString(), timezone: "America/Bogota",
+      id: owner.gameId, name: fixture.name, date: fixture.eventAt.toISOString(), timezone: "America/Bogota",
       budgetMin: 25000, budgetMax: 25000, open: true,
     });
 
@@ -62,7 +74,7 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
     assert.ok(await manageRegistration(db, created.token, owner.gameId, settings));
     assert.equal((await organizerPanel(peer, created.token, owner.gameId))?.game.guessingEnabled, false);
     assert.deepEqual(await publicInvitation(peer, token), {
-      name: settings.settings.name, date: fixture.eventAt.toISOString(), timezone: "America/Bogota",
+      id: owner.gameId, name: settings.settings.name, date: fixture.eventAt.toISOString(), timezone: "America/Bogota",
       budgetMin: 30000, budgetMax: 45000, open: true,
     });
 
@@ -96,7 +108,7 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
     assert.ok(rejection?.participantId);
     assert.ok(await manageRegistration(db, created.token, owner.gameId, { kind: "reject", personId: rejection.participantId }));
     assert.equal(await authorizeAccount(peer, rejectionAccount.token), null);
-    const rejectionLogin = await login(peer, pepper, { link: rejectionAccount.loginToken, pin, temporary: false, origin });
+    const rejectionLogin = await login(peer, pepper, { name: "Solicitud rechazada", game: "", gameId: owner.gameId, pin, temporary: false, origin });
     assert.ok(rejectionLogin);
     assert.equal((await authorizeAccount(peer, rejectionLogin.token))?.status, "rejected");
     assert.equal(await authorizeGame(peer, rejectionLogin.token), null);
@@ -142,7 +154,7 @@ test("E2.3 guarda partidas, inscripciones y permisos en PostgreSQL", async () =>
     const view = await organizerPanel(db, created.token, owner.gameId);
     const invitee = view?.people.find(({ displayName }) => displayName === "Invitación pendiente");
     assert.ok(invitee);
-    const invitationSession = await login(db, pepper, { link: created.loginToken, pin, temporary: false, origin });
+    const invitationSession = await login(db, pepper, { name: fixture.organizerName, game: "", gameId: owner.gameId, pin, temporary: false, origin });
     assert.ok(invitationSession);
     for (const [session, action] of [
       [signed.token, (worker: typeof db) => manageRegistration(worker, signed.token, owner.gameId, { kind: "close" })],

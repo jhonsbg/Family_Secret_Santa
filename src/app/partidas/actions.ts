@@ -22,13 +22,14 @@ export async function createGameAction(data: FormData): Promise<Feedback> {
     if (!settings) return { error: "Revisa la fecha, la hora y el presupuesto en pesos." };
     const result = await createManagedGame(authDatabase(), authPepper(), {
       ...settings,
+      organizerName: field(data, "organizer"),
       organizerDisplayName: data.get("plays") === "on" ? field(data, "organizer") : undefined,
       pin: field(data, "pin"), confirmation: field(data, "confirmation"),
       temporary: data.get("temporary") === "on", origin,
     });
-    if (!result) return { error: "Confirma un PIN de seis dígitos. Si hiciste varios intentos, espera unos minutos." };
+    if (!result) return { error: "Confirma un PIN de 6 dígitos. Si hiciste varios intentos, espera unos minutos." };
     await writeSession(result);
-    return { link: `/acceso?enlace=1#${result.loginToken}`, recoveryCode: result.recoveryCode };
+    return { recoveryCode: result.recoveryCode };
   } catch {
     return { error: "No pudimos crear la partida. Revisa los campos e inténtalo de nuevo." };
   }

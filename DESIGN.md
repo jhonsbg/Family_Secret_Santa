@@ -130,7 +130,7 @@ Al abrir el sobre, el sello se desvanece, se levanta la solapa y aparece la tarj
 
 ## 12. Acceso privado E2.2
 
-La activación y el acceso usan tarjetas y botones del sistema visual existente. El PIN usa un campo enmascarado con teclado numérico. La activación muestra el enlace que el participante debe guardar, y la vista de cuenta muestra el cierre de sesión y el aviso de dispositivo prestado.
+La activación y el acceso usan tarjetas y botones del sistema visual existente. Cada campo de PIN se enmascara, usa teclado numérico y muestra su formato junto al campo. Al elegir un PIN nuevo se indican los seis dígitos y que puede comenzar por cero. La activación muestra el código de recuperación, y la vista de cuenta muestra el cierre de sesión y el aviso de dispositivo prestado.
 
 ## 13. Partidas reales E2.3
 
@@ -138,7 +138,7 @@ Las pantallas reales y la demo tienen navegación diferenciada. La creación y l
 
 ## 14. Recuperación E2.4
 
-La pantalla de acceso enlaza a la recuperación en lenguaje directo. Las mismas tarjetas y los mismos campos numéricos de PIN se reutilizan para código personal y enlace asistido. El éxito muestra el nuevo enlace y el código una sola vez. El panel del organizador pide verificación presencial y confirmación antes de entregar un enlace temporal.
+La pantalla de acceso enlaza a la recuperación en lenguaje directo. Las mismas tarjetas y los mismos campos numéricos de PIN se reutilizan para código personal y enlace asistido. El éxito muestra el código nuevo una sola vez. El panel del organizador pide verificación presencial y confirmación antes de entregar un enlace temporal.
 
 ## 15. Sorteo E3.1
 
@@ -157,3 +157,5 @@ La pantalla de presentación reutiliza la escena de E1.1 con fondo verde, orname
 La presentación ocupa la pantalla con un marco fino, luz cálida sobre verde bosque y un regalo de papel vino con lazo dorado. La composición da el mayor tamaño al nombre que corresponde al momento del intercambio. Una tarjeta marfil destaca a quien regala después de la confirmación. La pausa se superpone al turno sin perder el contexto. El cierre reúne las parejas en una o dos columnas fluidas y presenta los totales con etiquetas.
 
 Motion acompaña las transiciones con entradas breves. Al revelar, la tapa se alza, aparece la tarjeta y salen doce partículas de una sola vez. El cierre tiene una celebración breve. Los controles de presentación permiten omitir efectos y usar pantalla completa cuando el navegador la admite. El panel móvil prioriza la acción del turno y agrupa pausa y posposición en segundo plano.
+
+El acceso pide «Tu nombre» y «Tu PIN». Si se abre sin el contexto de una partida, también pide el nombre de la partida. Una sesión vigente lleva directamente a «Mi partida».

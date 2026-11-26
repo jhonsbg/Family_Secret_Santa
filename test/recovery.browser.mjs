@@ -34,11 +34,13 @@ async function run() {
     const restored = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     const family = await browser.newPage({ viewport: { width: 320, height: 760 } });
     const assisted = await browser.newPage();
+    for (const page of [organizer, restored, family, assisted]) await page.routeWebSocket("**/_next/webpack-hmr**", () => {});
     stage = "crear el acceso del único organizador";
     await organizer.goto(new URL("/partidas", base).href);
     await organizer.getByLabel("Nombre de la partida").fill("[Ficticia] Recuperación " + randomBytes(4).toString("hex"));
     await organizer.getByLabel("Fecha y hora en Bogotá").fill(date);
     await organizer.getByLabel("Presupuesto sugerido en COP").fill("40000");
+    await organizer.getByLabel("Tu nombre", { exact: true }).fill("Organizador de prueba");
     await organizer.getByLabel("PIN de administración").fill(pin);
     await organizer.getByLabel("Confirma tu PIN").fill(pin);
     await organizer.getByRole("button", { name: "Crear mi partida" }).click();
@@ -48,7 +50,7 @@ async function run() {
 
     stage = "recuperación personal en dispositivo prestado";
     await restored.goto(new URL("/acceso", base).href);
-    await restored.getByRole("link", { name: "Olvidé mi PIN o perdí mi enlace" }).click();
+    await restored.getByRole("link", { name: "Olvidé mi PIN" }).click();
     await restored.getByLabel("Código personal de recuperación").fill(code);
     await fillPin(restored, nextPin);
     await restored.getByLabel("Estoy usando un dispositivo prestado").check();

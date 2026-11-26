@@ -25,7 +25,7 @@ test("E4.1 serializa sorteos, avances y enlaces y publica exclusivamente identid
   const pepper = randomBytes(32);
   const pin = String(randomBytes(4).readUInt32BE() % 1_000_000).padStart(6, "0");
   const origin = newToken();
-  const settings = { name: "[Ficticia] Revelación", eventAt: new Date("2027-12-25T00:00:00Z"),
+  const settings = { organizerName: "Organizador de prueba", name: "[Ficticia] Revelación", eventAt: new Date("2027-12-25T00:00:00Z"),
     budgetMin: 10000, budgetMax: 10000, pin, confirmation: pin, origin, temporary: false };
   const created: string[] = [];
   const owners: string[] = [];

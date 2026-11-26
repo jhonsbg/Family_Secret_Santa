@@ -45,11 +45,13 @@ async function run() {
     const guest = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     const manual = await browser.newPage({ viewport: { width: 320, height: 760 } });
     const secondGuest = await browser.newPage();
+    for (const page of [host, guest, manual, secondGuest]) await page.routeWebSocket("**/_next/webpack-hmr**", () => {});
     stage = "creación del organizador";
     await host.goto(new URL("/partidas", base).href);
     await host.getByLabel("Nombre de la partida").fill(eventName);
     await host.getByLabel("Fecha y hora en Bogotá").fill("2027-12-24T19:00");
     await host.getByLabel("Presupuesto sugerido en COP").fill("60000");
+    await host.getByLabel("Tu nombre", { exact: true }).fill("Organizador de prueba");
     await host.getByLabel("PIN de administración").fill(pin);
     await host.getByLabel("Confirma tu PIN").fill(pin);
     await host.getByRole("button", { name: "Crear mi partida" }).click();
@@ -108,6 +110,15 @@ async function run() {
     await secondGuest.goto(general);
     await secondGuest.reload();
     await secondGuest.getByText("Por ahora no se reciben nuevas solicitudes.").waitFor();
+    stage = "entrada por enlace compartido y sesión vigente";
+    await secondGuest.getByRole("link", { name: "Entrar a mi partida" }).click();
+    assert.equal(await secondGuest.getByLabel("Nombre de la partida").count(), 0);
+    await secondGuest.getByLabel("Tu nombre", { exact: true }).fill("Familia móvil");
+    await secondGuest.getByLabel("Tu PIN", { exact: true }).fill(pin);
+    await secondGuest.getByRole("button", { name: "Entrar a mi partida" }).click();
+    await secondGuest.getByText(/Participante confirmado/).waitFor();
+    await secondGuest.goto(new URL("/acceso", base).href);
+    assert.equal(new URL(secondGuest.url()).pathname, "/acceso/cuenta");
     for (const page of [host, guest, manual]) {
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
     }

@@ -5,10 +5,10 @@ import { keyedDigest } from "./crypto";
 
 export const attemptWindow = 15 * 60_000;
 
-export async function reserveAttempt(db: Database, pepper: Buffer, scope: string, subject: string, limit: number) {
+export async function reserveAttempt(db: Database, pepper: Buffer, scope: string, subject: string, limit: number, windowMs = attemptWindow) {
   const key = keyedDigest(pepper, scope, subject).toString("hex");
   const now = sql`statement_timestamp()`;
-  const expiry = sql`${now} + (${attemptWindow} * interval '1 millisecond')`;
+  const expiry = sql`${now} + (${windowMs} * interval '1 millisecond')`;
   // PostgreSQL serializes reservations per key, even across serverless instances.
   const [entry] = await db.insert(authAttempts).values({ key, count: 1, windowExpiresAt: expiry })
     .onConflictDoUpdate({

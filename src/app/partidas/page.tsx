@@ -19,7 +19,7 @@ export default async function CreateGamePage() {
       <EnvelopeScene />
     </section>
     <Card className="access-card">
-      {origin ? <CreateGameForm origin={origin} sessionDestination={sessionDestination} /> : <p>La creación de partidas todavía no está configurada en este entorno.</p>}
+      {origin ? <CreateGameForm sessionDestination={sessionDestination} /> : <p>La creación de partidas todavía no está configurada en este entorno.</p>}
       <Link href="/acceso/cuenta">Ya tengo acceso a mi partida</Link>
     </Card>
   </div>;

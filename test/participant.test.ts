@@ -31,7 +31,7 @@ test("E3.2 protege la apertura y los deseos por sesión y versión de sorteo", a
   const pepper = randomBytes(32);
   const pin = String(randomBytes(4).readUInt32BE() % 1_000_000).padStart(6, "0");
   const origin = newToken();
-  const config = {
+  const config = { organizerName: "Organizador de prueba",
     name: "[Ficticia] E3.2", eventAt: new Date("2027-12-25T00:00:00Z"),
     pin, confirmation: pin, budgetMin: 10000, budgetMax: 10000, origin, temporary: false, wishesEnabled: true,
   };

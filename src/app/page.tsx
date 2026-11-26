@@ -21,6 +21,6 @@ export default function HomePage() {
       <div><Gift aria-hidden="true" /><span><strong>Abre tu sobre</strong>Después del sorteo, verás en privado a quién le regalas.</span></div>
       <div><Sparkles aria-hidden="true" /><span><strong>Revela los regalos</strong>Guía el intercambio desde tu celular y comparte la presentación en el televisor.</span></div>
     </section>
-    <p>Si ya te invitaron, abre el enlace que te enviaron. Si perdiste tu enlace privado, puedes <Link className="text-link" href="/acceso/recuperar">recuperar tu acceso</Link>.</p>
+    <p>Si ya te invitaron, abre el enlace que te enviaron. Si olvidaste tu PIN, puedes <Link className="text-link" href="/acceso/recuperar">recuperar tu acceso</Link>.</p>
   </>;
 }

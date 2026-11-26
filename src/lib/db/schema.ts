@@ -87,11 +87,13 @@ export const pinCredentials = pgTable("pin_credentials", {
   identityId: uuid("identity_id").primaryKey().references(() => identities.id, { onDelete: "cascade" }),
   gameId: uuid("game_id").notNull().references(() => games.id, { onDelete: "cascade" }),
   loginHash: text("login_hash").notNull().unique(),
+  loginName: text("login_name"),
   pinHash: text("pin_hash").notNull(),
   recoveryHash: text("recovery_hash").unique(),
   version: integer("version").default(1).notNull(),
   updatedAt: updatedAt(),
 }, (t) => [
+  unique("pin_credentials_game_login_name_key").on(t.gameId, t.loginName),
   check("pin_credentials_version_positive", sql`${t.version} > 0`),
 ]);
 

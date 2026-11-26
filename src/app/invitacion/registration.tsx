@@ -43,6 +43,7 @@ export function Registration() {
       <h2>El intercambio</h2>
       <p><CalendarDays aria-hidden="true" size={18} /> {formatEvent(event.date, event.timezone)}</p>
       <p><Gift aria-hidden="true" size={18} /> {formatBudget(event.budgetMin, event.budgetMax)}</p>
+      <a className="button button-secondary" href={`/acceso?partida=${event.id}`}>Entrar a mi partida</a>
       {event.open ? <RegistrationForm key={token} token={token} /> : <p>Por ahora no se reciben nuevas solicitudes.</p>}
     </Card>
   </div>;
@@ -59,6 +60,7 @@ function RegistrationForm({ token }: { token: string }) {
     data.set("token", token);
     submit(data);
   }}>
+    <p>Usa tu nombre y apellidos si otra persona tiene el mismo nombre.</p>
     <label>Tu nombre<input name="name" required maxLength={60} autoComplete="name" /></label>
     {state.error && <p role="alert">{state.error}</p>}
     <Button type="submit" disabled={busy}>{busy ? "Enviando…" : "Solicitar inscripción"}</Button>

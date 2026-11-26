@@ -24,14 +24,17 @@ async function run() {
     const host = await browser.newPage({ viewport: { width: 1440, height: 960 } });
     const member = await browser.newPage({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
     const secondDevice = await browser.newPage({ reducedMotion: "reduce" });
+    for (const page of [host, member, secondDevice]) await page.routeWebSocket("**/_next/webpack-hmr**", () => {});
     const errors = [];
     member.on("pageerror", () => errors.push("participante"));
     secondDevice.on("pageerror", () => errors.push("segunda sesión"));
     stage = "preparar partida y activar acceso";
     await host.goto(new URL("/partidas", base).href);
-    await host.getByLabel("Nombre de la partida").fill("[Ficticia] Sobre " + randomBytes(4).toString("hex"));
+    const game = "[Ficticia] Sobre " + randomBytes(4).toString("hex");
+    await host.getByLabel("Nombre de la partida").fill(game);
     await host.getByLabel("Fecha y hora en Bogotá").fill("2027-12-24T19:00");
     await host.getByLabel("Presupuesto sugerido en COP").fill("80000");
+    await host.getByLabel("Tu nombre", { exact: true }).fill("Organizador de prueba");
     await host.getByLabel("PIN de administración").fill(pin);
     await host.getByLabel("Confirma tu PIN").fill(pin);
     await host.getByRole("button", { name: "Crear mi partida" }).click();
@@ -49,7 +52,6 @@ async function run() {
     await member.getByLabel("PIN nuevo", { exact: true }).fill(pin);
     await member.getByLabel("Confirma el PIN nuevo", { exact: true }).fill(pin);
     await member.getByRole("button", { name: "Activar mi acceso" }).click();
-    const accessLink = new URL(await member.getByRole("link", { name: "Mi enlace privado" }).getAttribute("href"), base).href;
     await member.getByRole("link", { name: "Continuar a mi acceso" }).click();
     await member.getByText("A la espera del sorteo", { exact: true }).waitFor();
     await member.getByLabel("Qué me gustaría recibir").fill("Libro ilustrado");
@@ -96,9 +98,11 @@ async function run() {
     }
 
     stage = "sesión independiente y movimiento reducido";
-    await secondDevice.goto(accessLink);
-    await secondDevice.getByLabel("PIN personal").fill(pin);
-    await secondDevice.getByRole("button", { name: "Entrar", exact: true }).click();
+    await secondDevice.goto(new URL("/acceso", base).href);
+    await secondDevice.getByLabel("Nombre de la partida").fill(game);
+    await secondDevice.getByLabel("Tu nombre", { exact: true }).fill(candidates[0]);
+    await secondDevice.getByLabel("Tu PIN").fill(pin);
+    await secondDevice.getByRole("button", { name: "Entrar a mi partida", exact: true }).click();
     await secondDevice.getByRole("button", { name: "Consultar mi sobre" }).waitFor();
     assert.equal(await secondDevice.getByLabel("Qué me gustaría recibir").inputValue(), "Libro ilustrado");
     assert.equal(await secondDevice.locator(".envelope-result").count(), 0);

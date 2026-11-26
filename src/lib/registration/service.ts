@@ -2,23 +2,26 @@ import { and, asc, count, eq, gt, inArray, isNull, ne } from "drizzle-orm";
 import { reserveAttempt } from "../auth/attempts";
 import { authorizeOrganizer } from "../auth/authorization";
 import { createCredential } from "../auth/credentials";
-import { hashPin, newToken, tokenDigest, validPin, validToken } from "../auth/crypto";
+import { hashPin, newToken, tokenDigest, validToken } from "../auth/crypto";
+import { accessName, nameKey } from "../auth/name";
+import { validNewPin } from "../auth/pin";
 import { replacePersonalInvitation } from "../auth/invitations";
 import { lockActiveSession } from "../auth/recovery-store";
 import { createSession } from "../auth/sessions";
 import type { Database, Transaction } from "../db/connection";
 import { createGameRecord, displayName, editableGameStates, validateGameSettings, type CreateGame, type GameSettings } from "../db/games";
-import { games, invites, participants, sessions } from "../db/schema";
+import { games, invites, participants, pinCredentials, sessions } from "../db/schema";
 
 export async function createManagedGame(db: Database, pepper: Buffer, input: CreateGame & {
-  pin: string; confirmation: string; temporary: boolean; origin: string;
+  organizerName: string; pin: string; confirmation: string; temporary: boolean; origin: string;
 }) {
-  if (!validPin(input.pin) || input.pin !== input.confirmation) return null;
+  const loginName = accessName(input.organizerName);
+  if (!loginName || !validNewPin(input.pin) || input.pin !== input.confirmation) return null;
   if (!await reserveAttempt(db, pepper, "game-creation-origin", input.origin, 4)) return null;
   const pinHash = await hashPin(pepper, input.pin);
   return db.transaction(async (tx) => {
     const game = await createGameRecord(tx, input, true);
-    const credential = await createCredential(tx, game.adminIdentityId, game.id, pinHash);
+    const credential = await createCredential(tx, game.adminIdentityId, game.id, pinHash, loginName);
     return { ...await createSession(tx, game.adminIdentityId, game.id, input.temporary), ...credential };
   });
 }
@@ -31,23 +34,23 @@ function activeGeneral(token: string, now: Date) {
 export async function publicInvitation(db: Database, token: string) {
   if (!validToken(token)) return null;
   const [event] = await db.select({
-    name: games.name, eventAt: games.eventAt, timezone: games.timezone,
+    id: games.id, name: games.name, eventAt: games.eventAt, timezone: games.timezone,
     budgetMin: games.budgetMin, budgetMax: games.budgetMax, state: games.state,
   }).from(invites).innerJoin(games, eq(invites.gameId, games.id)).where(activeGeneral(token, new Date()));
-  return event ? { name: event.name, date: event.eventAt.toISOString(), timezone: event.timezone,
+  return event ? { id: event.id, name: event.name, date: event.eventAt.toISOString(), timezone: event.timezone,
     budgetMin: event.budgetMin, budgetMax: event.budgetMax, open: event.state === "registrations_open" } : null;
 }
 
-function nameKey(name: string) {
-  return name.normalize("NFKC").trim().replace(/\s+/gu, " ").toLocaleLowerCase("es-CO");
-}
-
-async function nameTaken(tx: Transaction, gameId: string, name: string, except?: string) {
+async function nameTaken(tx: Transaction, gameId: string, name: string, except?: string, identity?: string | null) {
   const people = await tx.select({ name: participants.displayName }).from(participants).where(and(
     eq(participants.gameId, gameId), ne(participants.status, "withdrawn"),
     except ? ne(participants.id, except) : undefined,
   ));
-  return people.some((person) => nameKey(person.name) === nameKey(name));
+  const key = accessName(name);
+  if (!key || people.some((person) => nameKey(person.name) === key)) return true;
+  const [taken] = await tx.select({ id: pinCredentials.identityId }).from(pinCredentials)
+    .where(and(eq(pinCredentials.gameId, gameId), eq(pinCredentials.loginName, key), identity ? ne(pinCredentials.identityId, identity) : undefined));
+  return Boolean(taken);
 }
 
 export async function requestRegistration(db: Database, pepper: Buffer, token: string, rawName: string, origin: string) {
@@ -145,8 +148,10 @@ export async function manageRegistration(db: Database, token: string, gameId: st
     }
     if (operation.kind === "rename") {
       const name = displayName(operation.name);
-      if (await nameTaken(tx, gameId, name, person.id)) return null;
+      if (await nameTaken(tx, gameId, name, person.id, person.identityId)) return null;
       await tx.update(participants).set({ displayName: name, updatedAt: now }).where(personWhere);
+      if (person.identityId) await tx.update(pinCredentials).set({ loginName: accessName(name), updatedAt: now })
+        .where(and(eq(pinCredentials.identityId, person.identityId), eq(pinCredentials.loginName, nameKey(person.displayName))));
       return { success: true };
     }
     if (person.source === "organizer") return null;
@@ -160,9 +165,13 @@ export async function manageRegistration(db: Database, token: string, gameId: st
       await tx.update(invites).set({ revokedAt: now }).where(and(
         eq(invites.gameId, gameId), eq(invites.participantId, person.id), isNull(invites.usedAt), isNull(invites.revokedAt),
       ));
-      if (person.identityId) await tx.update(sessions).set({ revokedAt: now }).where(and(
-        eq(sessions.gameId, gameId), eq(sessions.identityId, person.identityId), isNull(sessions.revokedAt),
-      ));
+      if (person.identityId) {
+        if (operation.kind === "withdraw") await tx.update(pinCredentials).set({ loginName: null, updatedAt: now })
+          .where(and(eq(pinCredentials.gameId, gameId), eq(pinCredentials.identityId, person.identityId)));
+        await tx.update(sessions).set({ revokedAt: now }).where(and(
+          eq(sessions.gameId, gameId), eq(sessions.identityId, person.identityId), isNull(sessions.revokedAt),
+        ));
+      }
       return { success: true };
     }
     return null;

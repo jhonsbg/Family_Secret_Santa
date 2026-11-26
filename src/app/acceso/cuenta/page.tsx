@@ -6,7 +6,7 @@ import { participantHome } from "@/lib/participant/service";
 import { ParticipantExperience } from "./participant-experience";
 import { authDatabase, currentGame, sessionToken } from "@/lib/auth/web";
 import { ReplaceRecoveryCodeForm } from "../recuperar/recovery-form";
-import { ChangePinForm, SignOutForm } from "../access-form";
+import { ChangePinForm, SetLoginNameForm, SignOutForm } from "../access-form";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Mi acceso · Amigo Secreto", robots: { index: false, follow: false } };
@@ -27,6 +27,7 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
     <Card>
       <h1>{access.participantName ? `Hola, ${access.participantName}` : "Mi acceso"}</h1>
       <p>{access.gameName} · {access.organizer ? "Organizador" : access.status === "pending" ? "Solicitud pendiente" : access.status === "rejected" ? "Solicitud rechazada" : "Participante confirmado"}</p>
+      {access.loginName && <p>Nombre para entrar · {access.loginName}</p>}
       {(access.organizer || access.status === "confirmed") && <p>{formatEvent(access.eventAt, access.timezone)} · {budget}</p>}
       {access.status === "pending" && <p>El organizador aún debe aprobar tu solicitud. Vuelve a esta página para consultar el estado.</p>}
       {access.status === "rejected" && <p>La solicitud no fue aprobada. Puedes consultar al organizador si necesitas más información.</p>}
@@ -43,7 +44,8 @@ export default async function AccountPage({ searchParams }: { searchParams: Prom
       </Card>
     </>}
     {!home?.ok && access.status === "confirmed" && <p role="status">No pudimos cargar tu sobre y tus deseos. Intenta actualizar la página.</p>}
-    {(access.organizer || access.status === "confirmed") && <Card><h2>Cambiar mi PIN</h2><ChangePinForm /></Card>}
+    {!access.loginName && <Card><h2>Configura tu nombre de acceso</h2><SetLoginNameForm /></Card>}
+    {access.loginName && <Card><h2>Cambiar mi PIN</h2><ChangePinForm /></Card>}
     <Card><h2>Código de recuperación</h2><ReplaceRecoveryCodeForm /></Card>
   </div>;
 }

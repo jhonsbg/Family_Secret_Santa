@@ -28,7 +28,7 @@ async function run() {
     await host.getByLabel("Fecha y hora en Bogotá").fill("2027-12-24T19:00");
     await host.getByLabel("Presupuesto sugerido en COP").fill("80000");
     await host.getByLabel("También quiero participar").check();
-    await host.getByLabel("Tu nombre como participante").fill("Organizador ficticio");
+    await host.getByLabel("Tu nombre", { exact: true }).fill("Organizador de prueba");
     await host.getByLabel("PIN de administración").fill(pin);
     await host.getByLabel("Confirma tu PIN").fill(pin);
     await host.getByRole("button", { name: "Crear mi partida" }).click();

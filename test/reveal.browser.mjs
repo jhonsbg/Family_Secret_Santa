@@ -82,10 +82,10 @@ async function run() {
     await host.getByLabel("Nombre de la partida").fill(event);
     await host.getByLabel("Fecha y hora en Bogotá").fill("2027-12-24T19:00");
     await host.getByLabel("Presupuesto sugerido en COP").fill("80000");
+    await host.getByLabel("Tu nombre", { exact: true }).fill("Organizador de prueba");
     await host.getByLabel("PIN de administración").fill(pin);
     await host.getByLabel("Confirma tu PIN").fill(pin);
     await host.getByRole("button", { name: "Crear mi partida" }).click();
-    const hostLink = await host.getByLabel("Enlace privado", { exact: true }).inputValue();
     await host.getByRole("link", { name: "Abrir panel del organizador" }).click();
     stage = "editar presupuesto, inscribir y activar";
     await host.getByLabel("Presupuesto sugerido en COP").fill("90000");
@@ -95,7 +95,6 @@ async function run() {
     assert.equal(await host.getByLabel("Presupuesto sugerido en COP").inputValue(), "90000");
     await confirm(host, "Generar enlace general");
     const general = await host.getByLabel("Enlace general", { exact: true }).inputValue();
-    const privateLinks = new Map();
     for (const [index, name] of cast.entries()) {
       stage = "inscribir y activar participante " + (index + 1);
       const row = host.locator(".person-row").filter({ hasText: name });
@@ -116,9 +115,6 @@ async function run() {
       await member.getByLabel("PIN nuevo", { exact: true }).fill(pin);
       await member.getByLabel("Confirma el PIN nuevo", { exact: true }).fill(pin);
       await member.getByRole("button", { name: "Activar mi acceso" }).click();
-      const privatePath = await member.getByRole("link", { name: "Mi enlace privado", exact: true }).getAttribute("href");
-      assert.ok(privatePath);
-      privateLinks.set(name, new URL(privatePath, base).href);
       await member.getByRole("link", { name: "Continuar a mi acceso" }).click();
       if (index < 2) {
         await member.getByText(/Solicitud pendiente/).waitFor();
@@ -172,12 +168,14 @@ async function run() {
     await host.getByRole("button", { name: "Guardar configuración" }).waitFor({ state: "detached" });
     assert.equal((await host.request.get(new URL("/acceso/cuenta/estado", base).href)).status(), 401);
     const expectedGivers = new Map();
-    for (const [giver, privateLink] of privateLinks) {
+    for (const giver of cast) {
       const member = await browser.newPage({ reducedMotion: "reduce" });
       await member.routeWebSocket("**/_next/webpack-hmr**", () => {});
-      await member.goto(privateLink);
-      await member.getByLabel("PIN personal").fill(pin);
-      await member.getByRole("button", { name: "Entrar", exact: true }).click();
+      await member.goto(new URL("/acceso", base).href);
+      await member.getByLabel("Nombre de la partida").fill(event);
+      await member.getByLabel("Tu nombre", { exact: true }).fill(giver);
+      await member.getByLabel("Tu PIN").fill(pin);
+      await member.getByRole("button", { name: "Entrar a mi partida", exact: true }).click();
       await member.getByRole("heading", { name: "Mi sobre secreto" }).waitFor();
       const response = await member.reload();
       assert.ok(response?.ok());
@@ -251,9 +249,11 @@ async function run() {
     await nextOrganizer.routeWebSocket("**/_next/webpack-hmr**", () => {});
     const signIn = await nextOrganizer.newPage();
     await signIn.bringToFront();
-    await signIn.goto(hostLink);
-    await signIn.getByLabel("PIN personal").fill(pin);
-    await signIn.getByRole("button", { name: "Entrar", exact: true }).click();
+    await signIn.goto(new URL("/acceso", base).href);
+    await signIn.getByLabel("Nombre de la partida").fill(event);
+    await signIn.getByLabel("Tu nombre", { exact: true }).fill("Organizador de prueba");
+    await signIn.getByLabel("Tu PIN").fill(pin);
+    await signIn.getByRole("button", { name: "Entrar a mi partida", exact: true }).click();
     await signIn.getByRole("link", { name: "Gestionar mi partida" }).waitFor();
     const otherHost = await nextOrganizer.newPage();
     stage = "obtener el panel pausado con la sesión nueva";
@@ -357,7 +357,7 @@ async function run() {
 try {
   await run();
 } catch (error) {
-  const detail = String(error).split("\n").slice(0, 6).join(" ").replace(/[A-Za-z0-9_-]{43}/g, "[credencial]").replace(/\b\d{6}\b/g, "[PIN]");
+  const detail = String(error).split("\n").slice(0, 6).join(" ").replace(/[A-Za-z0-9_-]{43}/g, "[credencial]").replace(/\b(?:\d{4}|\d{6})\b/g, "[PIN]");
   console.error("Falló la prueba de navegador en la etapa:", stage, detail);
   process.exitCode = 1;
 } finally {

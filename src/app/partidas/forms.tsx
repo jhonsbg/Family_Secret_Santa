@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState, useRef, useState, type ReactNode } from "react";
+import { PinField } from "@/components/pin-field";
 import { Button } from "@/components/ui/button";
 import { RecoveryCode } from "../acceso/recovery-code";
 import { useHydrated } from "@/components/use-hydrated";
@@ -46,14 +47,12 @@ export function GameSettingsFields({ game }: { game?: GameSettingsFieldsProps })
   </>;
 }
 
-export function CreateGameForm({ origin, sessionDestination }: { origin: string; sessionDestination?: string }) {
-  const [plays, setPlays] = useState(false);
+export function CreateGameForm({ sessionDestination }: { sessionDestination?: string }) {
   const [state, submit, busy] = useActionState((_state: Feedback, data: FormData) => createGameAction(data), {});
-  if (state.link) return <div className="form-stack">
+  if (state.recoveryCode) return <div className="form-stack">
     <h2>Partida creada</h2>
-    <p>Guarda tu enlace privado. Con él y tu PIN podrás volver a gestionar la partida.</p>
-    <ShareLink path={state.link} origin={origin} />
-    {state.recoveryCode && <RecoveryCode code={state.recoveryCode} />}
+    <p>Para volver a entrar, usa el nombre de la partida, tu nombre y tu PIN.</p>
+    <RecoveryCode code={state.recoveryCode} />
     <a className="button button-primary" href="/partidas/organizar" onClick={(event) => {
       if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       event.preventDefault();
@@ -67,11 +66,11 @@ export function CreateGameForm({ origin, sessionDestination }: { origin: string;
   </div>;
   return <form className="form-stack" action={(data) => submit(data)}>
     <GameSettingsFields />
-    <label className="check"><input type="checkbox" name="plays" checked={plays} onChange={(event) => setPlays(event.target.checked)} /> También quiero participar</label>
-    {plays && <label>Tu nombre como participante<input name="organizer" required maxLength={60} /></label>}
+    <label>Tu nombre<input name="organizer" required maxLength={60} autoComplete="name" /></label>
+    <label className="check"><input type="checkbox" name="plays" /> También quiero participar</label>
     <div className="two-grid">
-      <label>PIN de administración<input type="password" name="pin" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="new-password" required /></label>
-      <label>Confirma tu PIN<input type="password" name="confirmation" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} autoComplete="new-password" required /></label>
+      <PinField name="pin">PIN de administración</PinField>
+      <PinField name="confirmation">Confirma tu PIN</PinField>
     </div>
     <label className="check"><input type="checkbox" name="temporary" /> Estoy usando un dispositivo prestado</label>
     {state.error && <p role="alert">{state.error}</p>}

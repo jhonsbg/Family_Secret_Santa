@@ -1,10 +1,10 @@
 # Amigo Secreto
 
-Amigo Secreto organiza el sorteo privado y la revelación de regalos de una familia. La portada lleva a las partidas reales. Para entrar a una partida existente, abre el enlace privado que guardaste y escribe tu PIN.
+Amigo Secreto organiza el sorteo privado y la revelación de regalos de una familia. La portada lleva a las partidas reales. Para entrar a una partida existente, escribe el nombre de la partida, tu nombre y tu PIN de seis dígitos. El enlace general o el enlace de entrada compartido ya identifican la partida.
 
 ## Empezar una partida
 
-1. Abre el dominio de la aplicación y pulsa **Crear una partida**. Configura fecha, presupuesto y opciones, elige tu PIN y guarda tu enlace privado y tu código de recuperación.
+1. Abre el dominio de la aplicación y pulsa **Crear una partida**. Configura fecha, presupuesto y opciones, elige tu PIN y guarda tu código de recuperación.
 2. En **Organizar**, genera una invitación general y compártela por WhatsApp. Aprueba las solicitudes o agrega participantes manualmente. Entrega los enlaces personales en privado.
 3. Cada familiar activa su acceso y puede guardar sus deseos. Cierra inscripciones, resuelve las solicitudes pendientes, revisa exclusiones y confirma el sorteo. Cada participante abre su propio sobre desde **Mi partida**.
 4. Genera el enlace de presentación y ábrelo en otro navegador o en un computador conectado al televisor. Controla los turnos desde el panel del organizador y finaliza para mostrar el resumen.
@@ -27,7 +27,7 @@ Con un proyecto Vercel conectado a GitHub, comprueba que la rama de Production s
 
 Después de revisar los cambios, publica el commit en `master` cuando esté autorizado. Si Vercel no inicia el despliegue por Git, crea un despliegue del commit en el proyecto existente. Comprueba en el panel que figure **Production** y que el SHA coincida. Abre la URL canónica desde un navegador sin sesión y comprueba la portada, el formulario de alta y el acceso privado. Para el primer juego familiar, usa otro navegador o televisor con el enlace de presentación que emite el panel.
 
-Esta actualización reutiliza el esquema de las seis migraciones existentes. El historial de la demo E1.1 permanece en Git. Las pruebas con datos ficticios se ejecutan en una base desechable.
+Antes de publicar el acceso por nombre, aplica la migración aditiva `0006_named_access` con el procedimiento de mantenimiento autorizado. Después de aplicarla deben figurar siete migraciones y cero pendientes. El historial de la demo E1.1 permanece en Git. Las pruebas con datos ficticios se ejecutan en una base desechable.
 
 ## E2.1 · Base de datos de desarrollo
 
@@ -79,9 +79,9 @@ npm run dev
 ```
 
 1. Abre `.env.auth-invitation` en tu editor y abre el enlace de Luna de Ejemplo. El archivo es local, está excluido de Git y contiene un enlace de un solo uso. Usa la dirección exacta de `AUTH_ORIGIN`.
-2. Elige y confirma un PIN ficticio. Guarda el enlace privado que se muestra y abre **Continuar a mi acceso**.
-3. Elige **Cerrar sesión** y abre de nuevo el enlace privado con el PIN ficticio. Prueba la opción de dispositivo prestado.
-4. Cambia el PIN desde tu cuenta. El enlace privado sigue siendo el mismo y el PIN anterior deja de servir.
+2. Elige y confirma un PIN ficticio. Guarda el código de recuperación y abre **Continuar a mi acceso**.
+3. Elige **Cerrar sesión** y entra con el nombre de la partida, tu nombre y tu PIN ficticio. Prueba la opción de dispositivo prestado.
+4. Cambia el PIN desde tu cuenta. El PIN anterior deja de servir.
 
 Para repetir desde cero usa `npm run db:reset` en la base de pruebas, elimina tu copia local anterior de `.env.auth-invitation` y vuelve a emitir la invitación. El reinicio reemplaza los datos de esa partida ficticia.
 
@@ -99,9 +99,9 @@ npm run db:migrate
 npm run dev
 ```
 
-1. Abre `/partidas`, configura el intercambio y define tu PIN. Guarda el enlace privado del organizador cuando aparezca.
+1. Abre `/partidas`, configura el intercambio y define tu PIN. Guarda el código de recuperación que se muestra.
 2. Abre el panel `/partidas/organizar` y genera el enlace general. Copia el enlace o abre el botón de WhatsApp para seleccionar el destinatario y enviar tú el mensaje.
-3. Abre el enlace general en otro perfil del navegador o en otro dispositivo. Solicita la inscripción, sigue el enlace de activación y guarda tu enlace privado.
+3. Abre el enlace general en otro perfil del navegador o en otro dispositivo. Solicita la inscripción, sigue el enlace de activación y guarda tu código de recuperación.
 4. En el panel, aprueba o rechaza la solicitud. Actualiza `/acceso/cuenta` en el dispositivo del participante para consultar el estado. También puedes agregar una persona manualmente y darle un enlace de activación.
 5. Para probar desde otros dispositivos en la misma red de desarrollo, configura `AUTH_ORIGIN=http://IP_LOCAL:3000`, inicia con `npm run dev -- --hostname 0.0.0.0` y abre esa misma dirección en todos los dispositivos. Con HTTP en red local usa nombres y PIN ficticios. Si el navegador bloquea el portapapeles, copia el enlace desde el campo de texto.
 
@@ -122,8 +122,8 @@ La aplicación utiliza la configuración de listas de deseos y adivinanzas en el
 
 Aplica las migraciones en una base de desarrollo desechable con `npm run db:migrate`. Mantén la configuración de `AUTH_ORIGIN` y `AUTH_PEPPER` descrita en E2.2 y arranca con `npm run dev`.
 
-1. Desde `/partidas` crea una partida ficticia. Guarda el código y el enlace privado del organizador. Haz lo mismo al activar un participante ficticio.
-2. En otro perfil del navegador abre `/acceso` y elige **Olvidé mi PIN o perdí mi enlace**. Introduce el código, confirma un PIN nuevo y guarda los datos nuevos. Prueba también **dispositivo prestado** y comprueba que la sesión anterior se cerró.
+1. Desde `/partidas` crea una partida ficticia. Guarda el código de recuperación del organizador. Haz lo mismo al activar un participante ficticio.
+2. En otro perfil del navegador abre `/acceso` y elige **Olvidé mi PIN**. Introduce el código, confirma un PIN nuevo y guarda los datos nuevos. Prueba también **dispositivo prestado** y comprueba que la sesión anterior se cerró.
 3. Para probar asistencia, en el panel del organizador abre la fila de un participante activado, marca la verificación presencial y confirma **Generar enlace de recuperación**. Abre ese enlace en un perfil sin otra sesión y deja que el participante elija su PIN. El enlace vence en 15 minutos.
 4. Desde **Mi acceso**, confirma tu PIN para generar otro código personal. Esto reemplaza el anterior. Las cuentas creadas antes de E2.4 deben hacer este paso para obtener su primer código.
 
@@ -146,9 +146,9 @@ Ejecuta `npm run test:draw` para las pruebas exhaustivas, estadísticas y de ren
 ## E3.2 · Probar el sobre y los deseos
 
 1. Arranca la aplicación con la configuración de desarrollo de E2.3. En `/partidas`, crea una partida ficticia con listas de deseos habilitadas.
-2. Agrega tres familiares ficticios desde el panel y genera un enlace personal para cada uno. Activa cada cuenta desde una ventana independiente y conserva sus enlaces privados y PIN de prueba.
+2. Agrega tres familiares ficticios desde el panel y genera un enlace personal para cada uno. Activa cada cuenta desde una ventana independiente y conserva sus nombres y PIN de prueba.
 3. Antes del sorteo, guarda deseos desde varias cuentas. Cierra las inscripciones y ejecuta el sorteo desde el panel.
-4. En `/acceso/cuenta`, abre el sobre y pulsa **Ver sus deseos**. Vuelve a entrar desde otro dispositivo con el enlace y PIN de esa misma persona para verificar **Consultar mi sobre** y sus deseos guardados.
+4. En `/acceso/cuenta`, abre el sobre y pulsa **Ver sus deseos**. Vuelve a entrar desde otro dispositivo con el nombre y PIN de esa misma persona para verificar **Consultar mi sobre** y sus deseos guardados.
 5. Deja una cuenta abierta. Desde el panel, elige **Repetir sorteo** y confirma. Al detectar el cambio, la cuenta muestra un sobre cerrado. **Anular para editar exclusiones** devuelve la cuenta al estado de espera.
 
 Para integración, apunta `DATABASE_URL_TEST` a una base PostgreSQL local desechable y ejecuta `npm run test:participant:db`. Para navegador, arranca la app con una base de desarrollo desechable y ejecuta `E2E_ORIGIN=http://localhost:3000 npm run test:participant:browser`. Las pruebas crean partidas ficticias.

@@ -61,7 +61,7 @@ Solo el servidor accede a la base de datos con credenciales. Evitar consultas de
 
 ## 5. PIN, invitaciones y sesiones
 
-Un PIN de 6 dígitos tiene espacio de búsqueda pequeño, por lo que necesita **defensas fuertes del lado del servidor**:
+El PIN nuevo tiene 4 dígitos y requiere **defensas fuertes del lado del servidor**:
 
 - Invitaciones y credenciales generadas con fuente criptográfica segura; tokens de activación/recovery de un solo uso, expiración breve y revocación.
 - Guardar hashes de tokens, no enlaces completos. Considerar intercambio seguro de token hacia sesión y evitar filtración por logs, encabezados Referer y herramientas de terceros.
@@ -167,9 +167,9 @@ La validación de cierre añadió una restricción de estado para que el organiz
 
 ## 15. Identidad y acceso E2.2
 
-Las rutas `/acceso`, `/acceso/activar` y `/acceso/cuenta` usan Server Actions y autorización de servidor. Las invitaciones de activación expiran a las 24 horas. Al canjearse se crea o vincula la identidad en la misma transacción que consume el token, guarda la credencial y abre la primera sesión. El enlace privado de acceso contiene otro token aleatorio. Los enlaces transportan los tokens en fragmentos de URL y el navegador los envía al servidor en el formulario. Las rutas sensibles usan `no-store` y una política sin Referer.
+Las rutas `/acceso`, `/acceso/activar` y `/acceso/cuenta` usan Server Actions y autorización de servidor. Las invitaciones de activación expiran a las 24 horas. Al canjearse se crea o vincula la identidad en la misma transacción que consume el token, guarda la credencial y abre la primera sesión. Los enlaces transportan los tokens en fragmentos de URL y el navegador los envía al servidor en el formulario. Las rutas sensibles usan `no-store` y una política sin Referer.
 
-PostgreSQL almacena hashes de tokens, PIN con Argon2id y HMAC del PIN con un secreto externo a la base, y contadores de intentos. Cada ventana de 15 minutos admite 5 intentos de PIN por identidad y 20 por origen, incluidos los intentos válidos. La activación tiene su propio límite de 20 por origen. En Vercel se toma la dirección del encabezado administrado por la plataforma. Fuera de Vercel se usa un contador compartido mientras no se configure una fuente de IP confiable. Establecer la retención de contadores y probar los límites bajo carga son tareas pendientes para el despliegue.
+El alta, la activación, el cambio, la recuperación y el inicio de sesión usan PIN de seis dígitos. Las operaciones autenticadas de cambio de PIN y renovación del código aún pueden verificar un PIN anterior de cuatro dígitos. PostgreSQL almacena hashes de tokens, PIN con Argon2id y HMAC del PIN con un secreto externo a la base, y contadores de intentos. Cada ventana de 15 minutos admite 5 intentos de PIN por identidad y 20 por origen, incluidos los intentos válidos. La activación tiene su propio límite de 20 por origen. En Vercel se toma la dirección del encabezado administrado por la plataforma. Fuera de Vercel se usa un contador compartido mientras no se configure una fuente de IP confiable. Establecer la retención de contadores y probar los límites bajo carga son tareas pendientes para el despliegue.
 
 La cookie `HttpOnly` y `SameSite=Lax` usa `Secure` en HTTPS productivo. La sesión ordinaria dura hasta 7 días con 2 horas de inactividad. La sesión prestada dura hasta 30 minutos con 10 minutos de inactividad y cookie de sesión del navegador. Cerrar sesión revoca el registro. Cambiar el PIN requiere el PIN actual y revoca las sesiones de la identidad en la misma transacción. Las mutaciones web verifican el origen exacto. Se validan el ámbito de la sesión, la pertenencia y el rol desde datos vigentes. Una sesión se abre para una partida concreta. La consulta de pertenencias puede listar las demás partidas de la misma identidad sin otorgar acceso a ellas. Los permisos de administración y los datos privados del participante tienen verificaciones distintas.
 
@@ -185,7 +185,7 @@ El enlace general se guarda como hash y autoriza consultar una proyección del e
 
 ## 17. Recuperación E2.4
 
-El código personal tiene 160 bits aleatorios. Se almacena un digest con dominio separado en la credencial vigente y el código se entrega solo durante la emisión. Dura hasta su canje o sustitución. Los enlaces asistidos de 15 minutos se almacenan como hashes y la emisión o renovación requiere sesión de organizador, pertenencia a la partida y confirmación de verificación presencial. La emisión conserva las sesiones actuales. El canje consume la credencial, reemplaza el PIN, el enlace de acceso y el código personal, revoca los enlaces asistidos y sesiones anteriores y crea la sesión nueva, todo en una transacción. Las filas de partida, credencial y participante se bloquean en ese orden para arbitrar solicitudes concurrentes. La renovación con PIN vigente conserva el enlace de acceso y las sesiones, y revoca códigos anteriores y enlaces asistidos pendientes.
+El código personal tiene 160 bits aleatorios. Se almacena un digest con dominio separado en la credencial vigente y el código se entrega solo durante la emisión. Dura hasta su canje o sustitución. Los enlaces asistidos de 15 minutos se almacenan como hashes y la emisión o renovación requiere sesión de organizador, pertenencia a la partida y confirmación de verificación presencial. La emisión conserva las sesiones actuales. El canje consume la credencial, reemplaza el PIN y el código personal, revoca los enlaces asistidos y sesiones anteriores y crea la sesión nueva, todo en una transacción. Las filas de partida, credencial y participante se bloquean en ese orden para arbitrar solicitudes concurrentes. La renovación con PIN vigente conserva las sesiones, y revoca códigos anteriores y enlaces asistidos pendientes.
 
 Las mutaciones validan el origen exacto y las rutas sensibles conservan `no-store` y `no-referrer`. La recuperación limita por origen y por identidad con contadores compartidos en PostgreSQL. El límite es de 8 intentos por origen y 4 por identidad en 15 minutos. El evento guarda tipo, fecha y UUID de partida e identidades pertinentes, sin guardar secretos. Se pueden revisar y limpiar contadores y eventos fuera de plazo con la política que describe el README.
 
@@ -234,3 +234,12 @@ El runtime web de Vercel selecciona la conexión agrupada por entorno y verifica
 La portada lleva a la creación de partidas y a la cuenta autenticada. Las rutas históricas de participante, organizador y presentación redirigen a sus equivalentes reales. El prototipo E1.1 queda en el historial de Git. La aplicación conserva los componentes festivos compartidos y el código de sembrado sigue reservado a herramientas de desarrollo.
 
 El organizador puede guardar nombre, fecha en Bogotá, presupuesto y opciones mientras la partida esté en inscripciones abiertas o cerradas. La escritura valida el origen, exige la sesión del organizador de la partida y usa el mismo bloqueo de fila que el sorteo. La invitación general existente muestra la configuración actual. La participación del organizador se elige al crear la partida. Esta integración reutiliza las seis migraciones existentes.
+
+
+## 24. Acceso por nombre y PIN
+
+La partida se identifica por su nombre exacto normalizado o por su UUID en un enlace compartido. La selección por nombre exige una sola coincidencia y nunca lista partidas o cuentas. El enlace compartido identifica la partida. La invitación general conserva su token y caducidad para inscripciones. Los enlaces personales de activación y recuperación siguen siendo temporales y de un solo uso.
+
+`pin_credentials.login_name` guarda el nombre de acceso normalizado, único dentro de cada partida. La migración 0006 asocia los nombres inequívocos de participantes ya activados. En caso de coincidencia exacta previa o un organizador anterior sin registro de participante, queda vacío y la persona puede elegirlo desde su sesión válida o después de recuperar el acceso. El nombre de acceso se distingue con apellidos cuando haga falta. Se conserva la columna histórica de hash del enlace para que la migración sea aditiva. La acción de inicio de sesión no usa esa columna.
+
+El PIN se verifica únicamente para la credencial de la partida seleccionada. Se mantienen 20 intentos por origen y cinco por identidad cada 15 minutos. El acceso por nombre añade un máximo de 15 intentos por identidad en 24 horas. El mismo bloqueo de partida y la versión de credenciales coordinan el inicio de sesión con cambios de PIN, nombres y retiros.

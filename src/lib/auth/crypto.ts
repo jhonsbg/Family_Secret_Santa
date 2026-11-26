@@ -1,7 +1,6 @@
 import { createHash, createHmac, randomBytes } from "node:crypto";
 import { hash, verify, type Options } from "@node-rs/argon2";
 
-export const validPin = (value: string) => value.length === 6 && /^[0-9]{6}$/.test(value);
 export const validToken = (value: string) => value.length === 43 && /^[A-Za-z0-9_-]{43}$/.test(value);
 export const newToken = () => randomBytes(32).toString("base64url");
 

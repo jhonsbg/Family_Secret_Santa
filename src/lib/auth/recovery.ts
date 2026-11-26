@@ -3,7 +3,8 @@ import type { Database, Transaction } from "../db/connection";
 import { games, invites, participants, pinCredentials, recoveryEvents } from "../db/schema";
 import { reserveAttempt } from "./attempts";
 import { authorizeOrganizer } from "./authorization";
-import { hashPin, newRecoveryCode, newToken, recoveryCodeDigest, tokenDigest, validPin, validToken, verifyPin } from "./crypto";
+import { hashPin, newRecoveryCode, newToken, recoveryCodeDigest, tokenDigest, validToken, verifyPin } from "./crypto";
+import { validExistingPin, validNewPin } from "./pin";
 import { lockActiveSession, revokeAssistedInvitations } from "./recovery-store";
 import { authenticatedSession, createSession, revokeIdentitySessions } from "./sessions";
 
@@ -65,7 +66,7 @@ export async function recoverAccess(db: Database, pepper: Buffer, request: {
   secret: string; assisted: boolean; pin: string; confirmation: string; temporary: boolean;
   origin: string; signedInIdentityId?: string;
 }) {
-  if (!validPin(request.pin) || request.pin !== request.confirmation) return null;
+  if (!validNewPin(request.pin) || request.pin !== request.confirmation) return null;
   if (!await reserveAttempt(db, pepper, "recovery-origin", request.origin, 8)) return null;
   const { assisted } = request;
   const digest = assisted
@@ -104,9 +105,8 @@ export async function recoverAccess(db: Database, pepper: Buffer, request: {
     }
 
     const nextCode = newRecoveryCode();
-    const loginToken = newToken();
     await tx.update(pinCredentials).set({
-      pinHash, loginHash: tokenDigest("login", loginToken), recoveryHash: nextCode.digest,
+      pinHash, loginHash: tokenDigest("login", newToken()), recoveryHash: nextCode.digest,
       version: credential.version + 1, updatedAt: now,
     }).where(eq(pinCredentials.identityId, identityId));
     await revokeAssistedInvitations(tx, gameId, identityId, now);
@@ -114,12 +114,12 @@ export async function recoverAccess(db: Database, pepper: Buffer, request: {
     await tx.insert(recoveryEvents).values({
       gameId, targetIdentityId: identityId, kind: assisted ? "assisted_redeemed" : "personal_redeemed",
     });
-    return { ...await createSession(tx, identityId, gameId, request.temporary), loginToken, recoveryCode: nextCode.code };
+    return { ...await createSession(tx, identityId, gameId, request.temporary), recoveryCode: nextCode.code };
   });
 }
 
 export async function replaceRecoveryCode(db: Database, pepper: Buffer, token: string, pin: string, origin: string) {
-  if (!validPin(pin)) return null;
+  if (!validExistingPin(pin)) return null;
   const session = await authenticatedSession(db, token, true);
   if (!session || !await reserveAttempt(db, pepper, "pin-origin", origin, 20)
     || !await reserveAttempt(db, pepper, "pin-identity", session.identityId, 5)) return null;

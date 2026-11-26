@@ -21,7 +21,7 @@ test("E3.1 versiona el sorteo, preserva los resultados y autoriza solo la lectur
   const pepper = randomBytes(32);
   const pin = String(randomBytes(4).readUInt32BE() % 1_000_000).padStart(6, "0");
   const origin = newToken();
-  const settings = { name: "[Ficticia] Sorteo", eventAt: new Date("2027-12-25T00:00:00Z"),
+  const settings = { organizerName: "Organizador de prueba", name: "[Ficticia] Sorteo", eventAt: new Date("2027-12-25T00:00:00Z"),
     pin, confirmation: pin, budgetMin: 10000, budgetMax: 10000, origin, temporary: false };
   const gameIds: string[] = [];
   const adminIds: string[] = [];

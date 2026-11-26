@@ -75,7 +75,9 @@ Un nuevo sorteo antes de la revelación crea una **nueva versión**: invalida en
 3. El familiar activa su cuenta, crea PIN y pasa a `CONFIRMADO_ACTIVO`.
 4. La persona participa en el sorteo incluso si no activa la cuenta todavía; para conocer su asignación deberá activar un acceso privado.
 
-**Duplicados:** una persona con el mismo nombre no reclama automáticamente un registro preexistente. En caso de coincidencia, el organizador valida y entrega la invitación del registro original. Los nombres visibles no son identificadores de autenticación.
+**Duplicados:** los nombres de acceso son únicos dentro de una partida. Los familiares con el mismo nombre usan apellidos o su nombre completo. Una persona puede usar su mismo nombre en varias partidas. Si los eventos homónimos no pueden distinguirse por nombre, se usa el enlace compartido de la partida.
+
+Quien tenga un PIN antiguo de 4 dígitos deberá actualizarlo desde su sesión o recuperarlo para entrar con su nombre. Un organizador antiguo sin nombre asociado puede configurarlo desde una sesión vigente o al completar la recuperación.
 
 **Acceso temporal:** modo para dispositivo prestado, con expiración corta, cierre de sesión explícito y `no-store` en respuestas sensibles. **Recuperación:** el organizador solo inicia una invitación de reactivación de un solo uso, tras verificar por fuera de la aplicación la identidad del familiar. El organizador requiere además un código de recuperación individual generado al crear su partida (propuesta para evitar quedar bloqueado si pierde su acceso). Sin un factor externo verificable no puede garantizarse resistencia absoluta frente a suplantación por un organizador malicioso: límite conocido del producto.
 
@@ -142,7 +144,7 @@ Reglas: reanudar desde el último estado confirmado; no revelación automática 
 
 ## 13. Decisiones ya aprobadas / detalles abiertos
 
-**Aprobado:** juego clásico con extras opcionales; revelación presencial guiada; inscripción híbrida; una persona administradora por partida; acceso individual mediante enlace + PIN de 6 dígitos; participación asistida con celular prestado; sin sobres físicos; estética navideña elegante y moderna; stack definido en `ARCHITECTURE.md`.
+**Aprobado:** juego clásico con extras opcionales; revelación presencial guiada; inscripción híbrida; una persona administradora por partida; acceso individual mediante nombre en la partida y PIN de 6 dígitos; participación asistida con celular prestado; sin sobres físicos; estética navideña elegante y moderna; stack definido en `ARCHITECTURE.md`.
 
 **Propuestas técnicas a validar durante implementación:** límite máximo de participantes por partida; expiración concreta de invitaciones/sesiones; política precisa de bloqueos; mecanismo de recuperación del organizador; intervalo de sincronización; estrategia de selección aleatoria uniforme bajo restricciones. No inventar decisiones de producto adicionales sin documentarlas.
 
@@ -158,7 +160,7 @@ La primera parte de E2 incorpora el modelo y las operaciones de datos de partida
 
 ## 16. Acceso privado E2.2
 
-Una invitación individual activa el acceso de un participante confirmado. El usuario crea y confirma su PIN y guarda un enlace privado distinto para accesos posteriores. La cuenta permite cerrar sesión y cambiar el PIN con el PIN vigente. El dispositivo prestado acorta la sesión y evita una cookie persistente. La demo visual se mantiene separada.
+Una invitación individual activa el acceso de un participante confirmado. El usuario crea y confirma su PIN y en adelante entra usando su nombre en la partida. La cuenta permite cerrar sesión y cambiar el PIN con el PIN vigente. El dispositivo prestado acorta la sesión y evita una cookie persistente. La demo visual se mantiene separada.
 
 ## 17. Gestión real E2.3
 
@@ -166,7 +168,7 @@ El organizador crea el evento, obtiene un acceso propio y comparte una invitaci�
 
 ## 18. Recuperación de acceso E2.4
 
-El participante y el administrador reciben un código personal de un solo uso al habilitar su acceso. El código permite elegir otro PIN y recibir un enlace privado nuevo. En su cuenta pueden reemplazar el código tras confirmar el PIN actual. El organizador puede emitir un enlace de recuperación para un participante activado de su partida tras verificarlo presencialmente. El participante elige su PIN en privado y el canje revoca los accesos anteriores. El administrador único se recupera con su código personal.
+El participante y el administrador reciben un código personal de un solo uso al habilitar su acceso. El código permite elegir otro PIN y renovar su código de recuperación. En su cuenta pueden reemplazar el código tras confirmar el PIN actual. El organizador puede emitir un enlace de recuperación para un participante activado de su partida tras verificarlo presencialmente. El participante elige su PIN en privado y el canje revoca los accesos anteriores. El administrador único se recupera con su código personal.
 
 ## 19. Sorteo real E3.1
 

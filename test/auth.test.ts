@@ -6,7 +6,7 @@ import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { activate, inviteParticipant, issueControlledInvitation } from "../src/lib/auth/invitations";
 import { authorizeGame, authorizeOrganizer, authorizeOwnParticipant, listGameMemberships } from "../src/lib/auth/authorization";
 import { changePin, login } from "../src/lib/auth/credentials";
-import { keyedDigest, newToken, tokenDigest } from "../src/lib/auth/crypto";
+import { hashPin, keyedDigest, newToken, tokenDigest } from "../src/lib/auth/crypto";
 import { authenticatedSession, revokeSession } from "../src/lib/auth/sessions";
 import { openDevelopmentDatabase } from "../src/lib/db/connection";
 import { gameRepository } from "../src/lib/db/games";
@@ -29,8 +29,8 @@ test("E2.2: activación, credenciales, sesiones y alcance por partida", async (t
   const activation = (invite: string, suffix: string, temporary = false) => ({
     invite, pin: fixturePin, confirmation: fixturePin, temporary, origin: scope + suffix,
   });
-  const credentials = (link: string, suffix: string, pin = fixturePin, temporary = false) => ({
-    link, pin, origin: scope + suffix, temporary,
+  const credentials = (name: string, suffix: string, pin = fixturePin, temporary = false) => ({
+    name, game: settings.name, pin, origin: scope + suffix, temporary,
   });
 
   try {
@@ -38,7 +38,7 @@ test("E2.2: activación, credenciales, sesiones y alcance por partida", async (t
     const first = await repo.create({ ...settings, organizerDisplayName: "Organizador ficticio" });
     gameIds.push(first.id);
     adminIds.push(first.adminIdentityId);
-    const second = await repo.create(settings);
+    const second = await repo.create({ ...settings, name: "Otra celebración" });
     gameIds.push(second.id);
     adminIds.push(second.adminIdentityId);
     const [organizer] = await people.list(first.id);
@@ -57,6 +57,8 @@ test("E2.2: activación, credenciales, sesiones y alcance por partida", async (t
       assert.equal(Boolean(await activate(db, pepper, activation(expired, "-expired"))), false);
       assert.equal(Boolean(await activate(db, pepper, activation(person.id, "-uuid"))), false);
       assert.equal(Boolean(await activate(db, pepper, { ...activation(personInvite, "-confirmation"), confirmation: otherPin })), false);
+      const oldLength = fixturePin.slice(0, 4);
+      assert.equal(await activate(db, pepper, { ...activation(personInvite, "-six"), pin: oldLength, confirmation: oldLength }), null);
       const withLineBreak = fixturePin + String.fromCharCode(10);
       assert.equal(Boolean(await activate(db, pepper, { ...activation(personInvite, "-newline"), pin: withLineBreak, confirmation: withLineBreak })), false);
     });
@@ -71,9 +73,9 @@ test("E2.2: activación, credenciales, sesiones y alcance por partida", async (t
       assert.equal(candidates.filter(Boolean).length, 1);
       assert.equal(Boolean(await activate(db, pepper, activation(personInvite, "-replay"))), false);
       assert.equal(Boolean(await open(person.id)), false);
-      const record = (await db.select().from(pinCredentials).where(eq(pinCredentials.loginHash, tokenDigest("login", personal.loginToken))))[0];
+      const record = (await db.select().from(pinCredentials).where(eq(pinCredentials.loginName, "participante ficticio")))[0];
       assert.ok(record?.pinHash.startsWith("$argon2id$"));
-      assert.ok(record?.loginHash !== personal.loginToken);
+      assert.ok(!("loginToken" in personal));
     });
 
     const admin = await activate(db, pepper, activation(organizerInvite, "-admin"));
@@ -102,26 +104,26 @@ test("E2.2: activación, credenciales, sesiones y alcance por partida", async (t
     });
 
     await t.test("PIN incorrecto, límites por identidad y origen bajo concurrencia", async () => {
-      assert.equal(Boolean(await login(db, pepper, credentials(personal.loginToken, "-bad-pin", otherPin))), false);
+      assert.equal(Boolean(await login(db, pepper, credentials("Participante ficticio", "-bad-pin", otherPin))), false);
       const blocked = await Promise.all(Array.from({ length: 8 }, (_, index) =>
-        login(index % 2 ? db : secondConnection.db, pepper, credentials(admin.loginToken, `-admin-${index}`, otherPin))));
+        login(index % 2 ? db : secondConnection.db, pepper, credentials("Organizador ficticio", `-admin-${index}`, otherPin))));
       assert.ok(blocked.every((result) => result === null));
-      assert.equal(Boolean(await login(db, pepper, credentials(admin.loginToken, "-valid-after-block"))), false);
+      assert.equal(Boolean(await login(db, pepper, credentials("Organizador ficticio", "-valid-after-block"))), false);
       const [identityLimit] = await db.select({ count: authAttempts.count }).from(authAttempts)
         .where(eq(authAttempts.key, keyedDigest(pepper, "pin-identity", first.adminIdentityId).toString("hex")));
       assert.equal(identityLimit.count, 5);
       await Promise.all(Array.from({ length: 20 }, () => login(db, pepper, credentials(newToken(), "-source-block", otherPin))));
-      assert.equal(Boolean(await login(db, pepper, credentials(personal.loginToken, "-source-block"))), false);
+      assert.equal(Boolean(await login(db, pepper, credentials("Participante ficticio", "-source-block"))), false);
     });
 
     await t.test("sesión temporal, caducidad y revocación persistente", async () => {
-      const borrowed = await login(db, pepper, credentials(personal.loginToken, "-borrowed", fixturePin, true));
+      const borrowed = await login(db, pepper, credentials("Participante ficticio", "-borrowed", fixturePin, true));
       assert.ok(borrowed);
       assert.equal((await authenticatedSession(db, borrowed.token))?.temporary, true);
       assert.ok(borrowed.expiresAt.getTime() - Date.now() <= 30 * 60_000);
       await revokeSession(db, borrowed.token);
       assert.equal(await authenticatedSession(secondConnection.db, borrowed.token), null);
-      const regular = await login(db, pepper, credentials(personal.loginToken, "-idle"));
+      const regular = await login(db, pepper, credentials("Participante ficticio", "-idle"));
       assert.ok(regular);
       await db.update(sessions).set({ createdAt: new Date(Date.now() - 120_000), idleExpiresAt: new Date(Date.now() - 60_000) })
         .where(eq(sessions.tokenHash, tokenDigest("session", regular.token)));
@@ -131,21 +133,24 @@ test("E2.2: activación, credenciales, sesiones y alcance por partida", async (t
       assert.equal(await authenticatedSession(db, regular.token), null);
     });
 
-    await t.test("el cambio de PIN revoca sesiones y rechaza la credencial anterior", async () => {
-      const active = await login(db, pepper, credentials(personal.loginToken, "-before-change"));
-      assert.ok(active);
-      const changed = await changePin(db, pepper, personal.token, {
-        current: fixturePin, pin: otherPin, confirmation: otherPin, origin: scope + "-change",
-      });
-      assert.ok(changed);
-      assert.equal(await authenticatedSession(secondConnection.db, active.token), null);
-      assert.equal(await authenticatedSession(db, personal.token), null);
-      // The prior test consumed four reservations plus the PIN change. A new window is simulated locally.
+    await t.test("un PIN de cuatro dígitos se actualiza en sesión y revoca el PIN anterior", async () => {
       const [member] = await db.select({ identityId: participants.identityId }).from(participants).where(eq(participants.id, person.id));
       assert.ok(member.identityId);
+      const legacyPin = fixturePin.slice(0, 4);
+      await db.update(pinCredentials).set({ pinHash: await hashPin(pepper, legacyPin) }).where(eq(pinCredentials.identityId, member.identityId));
+      assert.equal(await login(db, pepper, credentials("Participante ficticio", "-before-change", legacyPin)), null);
+      const active = await authenticatedSession(db, personal.token);
+      assert.ok(active);
+      const changed = await changePin(db, pepper, personal.token, {
+        current: legacyPin, pin: otherPin, confirmation: otherPin, origin: scope + "-change",
+      });
+      assert.ok(changed);
+      assert.equal(await authenticatedSession(secondConnection.db, personal.token), null);
+      assert.equal(await authenticatedSession(db, personal.token), null);
+      // The prior test consumed four reservations plus the PIN change. A new window is simulated locally.
       await db.delete(authAttempts).where(eq(authAttempts.key, keyedDigest(pepper, "pin-identity", member.identityId).toString("hex")));
-      assert.equal(Boolean(await login(db, pepper, credentials(personal.loginToken, "-old-pin"))), false);
-      assert.ok(await login(db, pepper, credentials(personal.loginToken, "-new-pin", otherPin)));
+      assert.equal(Boolean(await login(db, pepper, credentials("Participante ficticio", "-old-pin", legacyPin))), false);
+      assert.ok(await login(db, pepper, credentials("Participante ficticio", "-new-pin", otherPin)));
     });
   } finally {
     try {

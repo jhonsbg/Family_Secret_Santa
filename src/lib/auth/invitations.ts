@@ -3,7 +3,9 @@ import type { Database, Transaction } from "../db/connection";
 import { games, identities, invites, participants, pinCredentials } from "../db/schema";
 import { reserveAttempt } from "./attempts";
 import { authorizeOrganizer } from "./authorization";
-import { hashPin, newToken, tokenDigest, validPin, validToken } from "./crypto";
+import { hashPin, newToken, tokenDigest, validToken } from "./crypto";
+import { accessName } from "./name";
+import { validNewPin } from "./pin";
 import { createCredential } from "./credentials";
 import { lockActiveSession } from "./recovery-store";
 import { createSession, type AuthenticatedSession } from "./sessions";
@@ -50,7 +52,7 @@ export function issueControlledInvitation(db: Database, gameId: string, particip
 }
 
 export async function activate(db: Database, pepper: Buffer, input: { invite: string; pin: string; confirmation: string; temporary: boolean; origin: string }) {
-  if (!validToken(input.invite) || !validPin(input.pin) || input.pin !== input.confirmation) return null;
+  if (!validToken(input.invite) || !validNewPin(input.pin) || input.pin !== input.confirmation) return null;
   if (!await reserveAttempt(db, pepper, "activation-origin", input.origin, 20)) return null;
   const [candidate] = await db.select({ id: invites.id, gameId: invites.gameId, participantId: invites.participantId })
     .from(invites).where(and(
@@ -61,12 +63,19 @@ export async function activate(db: Database, pepper: Buffer, input: { invite: st
   const participantId = candidate.participantId;
   const pinHash = await hashPin(pepper, input.pin);
   return db.transaction(async (tx) => {
+    const [game] = await tx.select({ id: games.id }).from(games).where(eq(games.id, candidate.gameId)).for("no key update");
+    if (!game) return null;
     const [person] = await tx.select().from(participants).where(and(
       eq(participants.id, participantId), eq(participants.gameId, candidate.gameId),
       inArray(participants.status, ["confirmed", "pending"]),
       isNull(participants.activatedAt),
     )).for("update");
     if (!person || (person.identityId && person.source !== "organizer")) return null;
+    const loginName = accessName(person.displayName);
+    if (!loginName) return null;
+    const [taken] = await tx.select({ id: pinCredentials.identityId }).from(pinCredentials)
+      .where(and(eq(pinCredentials.gameId, person.gameId), eq(pinCredentials.loginName, loginName)));
+    if (taken) return null;
     if (person.identityId) {
       const [existing] = await tx.select({ version: pinCredentials.version }).from(pinCredentials)
         .where(eq(pinCredentials.identityId, person.identityId));
@@ -79,7 +88,7 @@ export async function activate(db: Database, pepper: Buffer, input: { invite: st
     if (!claimed) return null;
 
     const identityId = person.identityId ?? (await tx.insert(identities).values({}).returning({ id: identities.id }))[0].id;
-    const credential = await createCredential(tx, identityId, person.gameId, pinHash);
+    const credential = await createCredential(tx, identityId, person.gameId, pinHash, loginName);
     await tx.update(participants).set({ identityId, activatedAt: now, updatedAt: now })
       .where(eq(participants.id, participantId));
     const session = await createSession(tx, identityId, person.gameId, input.temporary);
